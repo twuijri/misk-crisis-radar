@@ -1,16 +1,14 @@
 services:
   crisis-radar:
-    build: .
-    image: misk-crisis-radar:latest
+    # Image is built automatically by GitHub Actions and pushed to GHCR.
+    # For a local build instead, comment this out and use:  build: .
+    image: ghcr.io/twuijri/misk-crisis-radar:latest
     container_name: misk-crisis-radar
     restart: unless-stopped
-    # No published ports needed — Traefik reaches the container over the shared
-    # network. Uncomment to also expose it directly for testing.
-    # ports:
-    #   - "8080:80"
+    pull_policy: always
     environment:
-      - SUPABASE_URL=${SUPABASE_URL:-}
-      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY:-}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
       - ACCESS_CODE=${ACCESS_CODE:-}
     networks:
       - proxy
@@ -19,11 +17,9 @@ services:
       - "traefik.http.routers.misk.rule=Host(`misk.i3u.us`)"
       - "traefik.http.routers.misk.entrypoints=web"
       - "traefik.http.services.misk.loadbalancer.server.port=80"
-      # Tell Traefik which network to use (must match the network below).
       - "traefik.docker.network=proxy"
 
 networks:
-  # This must be the SAME external network your Traefik container is on.
-  # Rename "proxy" if your Traefik uses a different network (e.g. "traefik", "web").
+  # Must match the external network your Traefik container is on.
   proxy:
     external: true
