@@ -164,6 +164,8 @@ footer.foot{text-align:center;color:var(--muted);font-size:12px;margin-top:38px}
 [dir="rtl"] header.top .stripes{right:auto;left:0;clip-path:polygon(0 0,72% 0,100% 100%,0 100%)}
 [dir="rtl"] .gate .stripes{right:auto;left:0;clip-path:polygon(0 0,70% 0,100% 100%,0 100%)}
 @media(max-width:900px){[dir="rtl"] .titleblock{border-right:none;padding-right:0;margin-right:0}}
+/* View-only by default; edit controls appear only after the editor logs in. */
+body:not(.can-edit) .edit-only{display:none!important}
 </style>
 </head>
 <body>
@@ -172,11 +174,12 @@ footer.foot{text-align:center;color:var(--muted);font-size:12px;margin-top:38px}
   <div class="stripes"></div>
   <div class="gatecard">
     <div class="logo">M</div>
-    <h3 data-i18n="app_title">Crisis Radar</h3>
-    <p data-i18n="gate_sub">Misk Foundation · Strategic Communication. Enter the team access code to continue.</p>
+    <h3 data-i18n="edit_login_title">Editor sign-in</h3>
+    <p data-i18n="edit_login_sub">The dashboard is view-only. Enter the editor access code to add, edit and delete cases.</p>
     <input type="password" id="gateInput" data-i18n-ph="access_code" placeholder="Access code" autocomplete="off" />
     <div class="gate-err" id="gateErr" data-i18n="gate_err">Incorrect code. Try again.</div>
-    <button class="btn primary" style="width:100%;justify-content:center" id="gateBtn" data-i18n="enter_workspace">Enter workspace</button>
+    <button class="btn primary" style="width:100%;justify-content:center" id="gateBtn" data-i18n="enter_editing">Enter editing mode</button>
+    <button class="btn line" style="width:100%;justify-content:center;margin-top:8px" id="gateCancel" data-i18n="cancel">Cancel</button>
   </div>
 </div>
 
@@ -192,7 +195,8 @@ footer.foot{text-align:center;color:var(--muted);font-size:12px;margin-top:38px}
     <div class="live off" id="liveBadge"><span class="dot"></span><span id="liveText" data-i18n="live_connecting">Connecting…</span></div>
     <button class="btn ghost" id="langBtn">العربية</button>
     <button class="btn ghost" id="refreshBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6"/></svg><span data-i18n="refresh">Refresh</span></button>
-    <button class="btn primary" id="addBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M12 5v14M5 12h14"/></svg><span data-i18n="add_case">Add New Case</span></button>
+    <button class="btn line" id="loginBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg><span data-i18n="login">Login</span></button>
+    <button class="btn primary edit-only" id="addBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M12 5v14M5 12h14"/></svg><span data-i18n="add_case">Add New Case</span></button>
   </div>
 </header>
 
@@ -245,7 +249,7 @@ footer.foot{text-align:center;color:var(--muted);font-size:12px;margin-top:38px}
       <thead><tr><th data-i18n="th_case">Case</th><th data-i18n="th_category">Category</th><th data-i18n="th_classification">Classification</th><th data-i18n="th_score">Score</th><th data-i18n="th_status">Status</th><th data-i18n="th_updated">Updated</th><th style="text-align:right" data-i18n="th_actions">Actions</th></tr></thead>
       <tbody id="tbody"></tbody>
     </table>
-    <div class="empty" id="emptyState" style="display:none"><h3 data-i18n="empty_title">No cases match your view</h3><p data-i18n="empty_sub">Add your first live case to begin monitoring.</p><button class="btn dark" onclick="openForm()" data-i18n="add_case_plus">+ Add New Case</button></div>
+    <div class="empty" id="emptyState" style="display:none"><h3 data-i18n="empty_title">No cases match your view</h3><p data-i18n="empty_sub">Add your first live case to begin monitoring.</p><button class="btn dark edit-only" onclick="openForm()" data-i18n="add_case_plus">+ Add New Case</button></div>
   </section>
 
   <footer class="foot" data-i18n-html="footer"><b>Misk · Crisis Radar</b> — shared team workspace. Scores roll up to a Low / Medium / High classification automatically.</footer>
@@ -284,24 +288,29 @@ footer.foot{text-align:center;color:var(--muted);font-size:12px;margin-top:38px}
     <div class="d-block"><div class="k" data-i18n="d_action_k">Recommended action</div><div class="v" id="d_action"></div></div>
     <div class="d-block"><div class="k" data-i18n="d_refs_k">References</div><div class="v" id="d_refs"></div></div>
     <div class="notes"><h4 data-i18n="monitoring_notes">Monitoring notes</h4><div id="d_notes"></div>
-      <div class="addnote"><textarea id="noteInput" data-i18n-ph="add_update_ph" placeholder="Add a monitoring update…"></textarea><button class="btn dark" id="noteBtn" data-i18n="add">Add</button></div>
+      <div class="addnote edit-only"><textarea id="noteInput" data-i18n-ph="add_update_ph" placeholder="Add a monitoring update…"></textarea><button class="btn dark" id="noteBtn" data-i18n="add">Add</button></div>
     </div>
   </div>
-  <div class="mfoot"><button class="btn line del" id="d_delete" data-i18n="delete">Delete</button><button class="btn dark" id="d_edit" data-i18n="edit_case">Edit case</button></div>
+  <div class="mfoot edit-only"><button class="btn line del" id="d_delete" data-i18n="delete">Delete</button><button class="btn dark" id="d_edit" data-i18n="edit_case">Edit case</button></div>
 </div></div>
 
 <script>
 /* ============================================================
    BACKEND CONFIG
    The page talks to its own self-hosted API (the "api" service),
-   reached on the same domain under /api. In the Docker stack
-   these placeholders are replaced at container start from the
-   API_BASE / API_TOKEN / ACCESS_CODE environment variables
-   (see docker-entrypoint.sh).
+   reached on the same domain under /api. In the Docker stack the
+   __API_BASE__ placeholder is replaced at container start from the
+   API_BASE environment variable (see docker-entrypoint.sh).
+   The editor access code is NOT embedded here — it is entered at
+   login and verified by the API on every write.
    ============================================================ */
 const API_BASE = "__API_BASE__".indexOf("__") === 0 ? "/api" : "__API_BASE__";
-let API_TOKEN  = "__API_TOKEN__";   if (API_TOKEN.indexOf("__") === 0)  API_TOKEN  = "";
-let ACCESS_CODE = "__ACCESS_CODE__"; if (ACCESS_CODE.indexOf("__") === 0) ACCESS_CODE = "";
+/* The page is public & read-only. Editing is unlocked by logging in with the
+   editor access code, which is checked by the API on every write. The code is
+   never embedded in the page — the editor types it at login and it is kept in
+   sessionStorage for the tab only. */
+let EDIT_CODE = sessionStorage.getItem("crg_code") || "";
+let editMode  = false;
 
 const CATEGORIES = ["Reputational","Media & Public","Social / Digital","Stakeholder","Operational","Governance"];
 const STATUSES   = ["Active","Monitoring","Escalated","Resolved"];
@@ -347,6 +356,9 @@ const I18N = {
     search_ph:"Search cases, summaries…", add_update_ph:"Add a monitoring update…", access_code:"Access code",
     gate_sub:"Misk Foundation · Strategic Communication. Enter the team access code to continue.",
     gate_err:"Incorrect code. Try again.", enter_workspace:"Enter workspace",
+    login:"Login", exit_edit:"Exit editing", edit_login_title:"Editor sign-in",
+    edit_login_sub:"The dashboard is view-only. Enter the editor access code to add, edit and delete cases.",
+    enter_editing:"Enter editing mode", login_needed:"Your editing session ended. Please log in again.",
     cfg_banner:'<b>Backend not reachable</b> — the page is running in demo mode and nothing is saved. Check that the <code>api</code> service is running and reachable at <code>/api</code>.',
     footer:'<b>Misk · Crisis Radar</b> — shared team workspace. Scores roll up to a Low / Medium / High classification automatically.',
     live_connecting:"Connecting…", live_synced:"Live · synced", live_error:"Connection error", live_demo:"Demo mode · not connected",
@@ -379,6 +391,9 @@ const I18N = {
     search_ph:"ابحث في الحالات والملخصات…", add_update_ph:"أضف تحديث رصد…", access_code:"رمز الدخول",
     gate_sub:"مؤسسة مسك · الاتصال الاستراتيجي. أدخل رمز دخول الفريق للمتابعة.",
     gate_err:"رمز غير صحيح. حاول مجددًا.", enter_workspace:"دخول مساحة العمل",
+    login:"دخول", exit_edit:"خروج من التعديل", edit_login_title:"دخول المحرّر",
+    edit_login_sub:"اللوحة للعرض فقط. أدخل رمز التعديل لإضافة الحالات وتعديلها وحذفها.",
+    enter_editing:"الدخول لوضع التعديل", login_needed:"انتهت جلسة التعديل. يرجى تسجيل الدخول من جديد.",
     cfg_banner:'<b>تعذّر الوصول للخادم</b> — الصفحة تعمل بالوضع التجريبي ولا يُحفظ شيء. تأكد أن خدمة <code>api</code> تعمل وقابلة للوصول على <code>/api</code>.',
     footer:'<b>مسك · رادار الأزمات</b> — مساحة عمل مشتركة للفريق. تُصنَّف النتائج تلقائيًا إلى منخفض / متوسط / مرتفع.',
     live_connecting:"جارٍ الاتصال…", live_synced:"مباشر · متزامن", live_error:"خطأ في الاتصال", live_demo:"وضع تجريبي · غير متصل",
@@ -411,7 +426,9 @@ function clsLabel(c){ return t("cls_"+c); }
 let CASES=[], activeStatus="All", activeCat="All", searchTerm="", selectedId=null, currentDetailId=null, liveKey="live_connecting";
 let configured = true;   // set to false if the API can't be reached → demo mode
 let pollTimer = null;
-function apiHeaders(){ const h={"Content-Type":"application/json"}; if(API_TOKEN) h["Authorization"]="Bearer "+API_TOKEN; return h; }
+function apiHeaders(){ const h={"Content-Type":"application/json"}; if(EDIT_CODE) h["X-Access-Code"]=EDIT_CODE; return h; }
+/* Returns true if the error was an auth failure (and handles it). */
+function handleAuth(e){ if(e && e.message==="unauthorized"){ exitEditMode(); alert(t("login_needed")); return true; } return false; }
 async function api(path, opts){ opts=opts||{}; const r=await fetch(API_BASE+path,{headers:apiHeaders(),...opts}); if(!r.ok){ let m="HTTP "+r.status; try{const j=await r.json(); if(j&&j.error) m=j.error;}catch(e){} throw new Error(m); } return r.status===204?null:r.json(); }
 
 const DEMO=[{id:"demo1",title:"(Demo) Connect Supabase to save real cases",category:"Governance",summary:"Placeholder until your Supabase keys are added. Then the radar reads & writes from the shared team database.",status:"Monitoring",severity:2,urgency:2,reach:1,sentiment:2,escalation_risk:2,strategic_impact:2,expected_impact:"—",recommended_action:"Add Supabase keys, then re-enter your two real cases.",reference_links:"",created_at:new Date().toISOString(),updated_at:new Date().toISOString()}];
@@ -428,14 +445,36 @@ function classify(score){ return score>=3.67?"High":score>=2.34?"Medium":"Low"; 
 function clsOf(c){ return classify(compositeScore(c)); }
 
 /* ============================================================
-   ACCESS GATE
+   EDITOR LOGIN  (page itself is always public / read-only)
    ============================================================ */
-function initGate(){
-  if(!ACCESS_CODE || sessionStorage.getItem("crg_ok")==="1"){ start(); return; }
+function updateLoginBtn(){
+  const b=document.getElementById("loginBtn"); if(!b) return;
+  b.querySelector("span").textContent = editMode ? t("exit_edit") : t("login");
+  b.classList.toggle("primary", editMode);
+}
+function enterEditMode(){
+  editMode=true; document.body.classList.add("can-edit"); updateLoginBtn();
+  render(); if(currentDetailId) openDetail(currentDetailId);
+}
+function exitEditMode(){
+  editMode=false; EDIT_CODE=""; sessionStorage.removeItem("crg_code");
+  document.body.classList.remove("can-edit"); updateLoginBtn();
+  render(); if(currentDetailId) openDetail(currentDetailId);
+}
+function openLogin(){
+  if(editMode){ exitEditMode(); return; }
+  if(!configured){ enterEditMode(); return; }      // demo / offline → local-only editing
   const g=document.getElementById("gate"); g.classList.add("open");
-  const submit=()=>{ if(document.getElementById("gateInput").value===ACCESS_CODE){sessionStorage.setItem("crg_ok","1");g.classList.remove("open");start();} else {document.getElementById("gateErr").style.display="block";} };
-  document.getElementById("gateBtn").onclick=submit;
-  document.getElementById("gateInput").addEventListener("keydown",e=>{if(e.key==="Enter")submit();});
+  document.getElementById("gateErr").style.display="none";
+  const inp=document.getElementById("gateInput"); inp.value=""; setTimeout(()=>inp.focus(),60);
+}
+function closeLogin(){ document.getElementById("gate").classList.remove("open"); }
+async function tryLogin(){
+  const code=document.getElementById("gateInput").value;
+  try{ await api("/auth",{method:"POST",body:JSON.stringify({code})}); }
+  catch(e){ document.getElementById("gateErr").style.display="block"; return; }
+  EDIT_CODE=code; sessionStorage.setItem("crg_code",code);
+  closeLogin(); enterEditMode();
 }
 
 /* ============================================================
@@ -471,20 +510,20 @@ async function saveCase(){
   try{
     if(id) await api("/cases/"+id,{method:"PATCH",body:JSON.stringify(rec)});
     else   await api("/cases",{method:"POST",body:JSON.stringify(rec)});
-  }catch(e){ alert(t("could_not_save")+e.message); return; }
+  }catch(e){ if(handleAuth(e))return; alert(t("could_not_save")+e.message); return; }
   closeForm(); await loadCases();
 }
 async function deleteCase(id){
   if(!confirm(t("confirm_delete"))) return;
   if(!configured){ CASES=CASES.filter(c=>c.id!==id); closeDetail(); render(); return; }
-  try{ await api("/cases/"+id,{method:"DELETE"}); }catch(e){ alert(t("could_not_delete")+e.message); return; }
+  try{ await api("/cases/"+id,{method:"DELETE"}); }catch(e){ if(handleAuth(e))return; alert(t("could_not_delete")+e.message); return; }
   closeDetail(); await loadCases();
 }
 async function loadNotes(id){ if(!configured) return []; try{ return await api("/cases/"+id+"/notes"); }catch(e){ return []; } }
 async function addNote(id){
   const txt=document.getElementById("noteInput").value.trim(); if(!txt) return;
   if(!configured){ alert(t("connect_backend")); return; }
-  try{ await api("/cases/"+id+"/notes",{method:"POST",body:JSON.stringify({note:txt})}); }catch(e){ alert(e.message); return; }
+  try{ await api("/cases/"+id+"/notes",{method:"POST",body:JSON.stringify({note:txt})}); }catch(e){ if(handleAuth(e))return; alert(e.message); return; }
   document.getElementById("noteInput").value=""; openDetail(id);
 }
 /* No websockets — near-real-time via a light poll every few seconds. */
@@ -563,7 +602,7 @@ function renderTable(){
       <td style="font-weight:700">${sc}<span style="color:var(--muted);font-weight:500">/5</span></td>
       <td><span class="st st-${c.status}">${esc(statusLabel(c.status))}</span></td>
       <td>${fmtDate(c.updated_at)}</td>
-      <td onclick="event.stopPropagation()"><div class="rowact">
+      <td onclick="event.stopPropagation()"><div class="rowact edit-only">
         <button class="iconbtn" title="${esc(t("edit_case"))}" onclick="openForm('${c.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
         <button class="iconbtn del" title="${esc(t("delete"))}" onclick="deleteCase('${c.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg></button>
       </div></td>`;
@@ -685,6 +724,7 @@ function applyLang(){
   document.querySelectorAll("[data-i18n-html]").forEach(el=>{ el.innerHTML = t(el.getAttribute("data-i18n-html")); });
   document.querySelectorAll("[data-i18n-ph]").forEach(el=>{ el.setAttribute("placeholder", t(el.getAttribute("data-i18n-ph"))); });
   document.getElementById("langBtn").textContent = LANG==="ar" ? "EN" : "العربية";
+  updateLoginBtn();
   setLive(!document.getElementById("liveBadge").classList.contains("off"), liveKey);
   buildFilters();
   if(document.getElementById("dimFields").dataset.built){ rebuildDimFields(); fillFormSelects(); }
@@ -715,11 +755,21 @@ document.getElementById("portfolioBtn").onclick=()=>{selectedId=null;renderRadar
 document.getElementById("hideResolved").onchange=()=>{renderRadar();};
 document.getElementById("searchInput").addEventListener("input",e=>{searchTerm=e.target.value.toLowerCase();renderTable();});
 document.getElementById("langBtn").onclick=()=>{ LANG = LANG==="ar"?"en":"ar"; applyLang(); };
+document.getElementById("loginBtn").onclick=openLogin;
+document.getElementById("gateBtn").onclick=tryLogin;
+document.getElementById("gateCancel").onclick=closeLogin;
+document.getElementById("gateInput").addEventListener("keydown",e=>{if(e.key==="Enter")tryLogin();});
 [document.getElementById("formOverlay"),document.getElementById("detailOverlay")].forEach(o=>o.addEventListener("click",e=>{if(e.target===o)o.classList.remove("open");}));
-document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeForm();closeDetail();}});
-function start(){ buildFilters(); loadCases(); initRealtime(); if(!configured) setLive(false,"live_demo"); }
+document.getElementById("gate").addEventListener("click",e=>{if(e.target.id==="gate")closeLogin();});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeForm();closeDetail();closeLogin();}});
+function start(){
+  if(EDIT_CODE){ editMode=true; document.body.classList.add("can-edit"); }  // restore tab session
+  updateLoginBtn();
+  buildFilters(); loadCases(); initRealtime();
+  if(!configured) setLive(false,"live_demo");
+}
 applyLang();
-initGate();
+start();
 </script>
 </body>
 </html>

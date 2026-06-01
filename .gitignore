@@ -3,8 +3,9 @@
 .env.local
 *.local
 
-# OS / editor noise
+# OS / editor / local tooling noise
 .DS_Store
 Thumbs.db
 .idea/
 .vscode/
+.claude/

@@ -35,7 +35,8 @@ services:
         condition: service_healthy
     environment:
       - DATABASE_URL=postgres://${POSTGRES_USER:-misk}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-misk}
-      - API_TOKEN=${API_TOKEN:-}
+      # Editor access code. Reads are public; writes require this code.
+      - ACCESS_CODE=${ACCESS_CODE:-}
     networks:
       - internal
       - proxy
@@ -60,8 +61,6 @@ services:
       - api
     environment:
       - API_BASE=/api
-      - API_TOKEN=${API_TOKEN:-}
-      - ACCESS_CODE=${ACCESS_CODE:-}
     networks:
       - proxy
     labels:

@@ -10,7 +10,9 @@ const express = require("express");
 const { Pool } = require("pg");
 
 const PORT = process.env.PORT || 3000;
-const API_TOKEN = process.env.API_TOKEN || "";
+// The editor access code. Reads are always public; writes require this code
+// (sent by the browser as the X-Access-Code header). Empty = writes open.
+const ACCESS_CODE = process.env.ACCESS_CODE || "";
 const DATABASE_URL =
   process.env.DATABASE_URL ||
   `postgres://${process.env.POSTGRES_USER || "misk"}:${process.env.POSTGRES_PASSWORD || "misk"}@${process.env.PGHOST || "db"}:5432/${process.env.POSTGRES_DB || "misk"}`;
@@ -120,17 +122,28 @@ function asyncRoute(fn) {
 const app = express();
 app.use(express.json({ limit: "256kb" }));
 
-// Optional Bearer-token gate. If API_TOKEN is empty, the API is open
-// (it still sits behind the reverse proxy on the internal network).
+const WRITE_METHODS = ["POST", "PATCH", "PUT", "DELETE"];
+
+// Reads are public. Writes require the editor access code. The /api/auth
+// route checks the code itself, so it is allowed through here.
 app.use((req, res, next) => {
   if (req.path === "/api/health" || req.path === "/health") return next();
-  if (!API_TOKEN) return next();
-  const auth = req.headers["authorization"] || "";
-  if (auth === "Bearer " + API_TOKEN) return next();
+  if (req.path === "/api/auth") return next();
+  if (!WRITE_METHODS.includes(req.method)) return next();
+  if (!ACCESS_CODE) return next();
+  const code = req.headers["x-access-code"] || "";
+  if (code === ACCESS_CODE) return next();
   return res.status(401).json({ error: "unauthorized" });
 });
 
 app.get(["/api/health", "/health"], (req, res) => res.json({ ok: true }));
+
+// Editor login check — returns 200 if the code is correct (or none required).
+app.post("/api/auth", (req, res) => {
+  const code = (req.body && req.body.code) || "";
+  if (!ACCESS_CODE || code === ACCESS_CODE) return res.json({ ok: true });
+  return res.status(401).json({ error: "unauthorized" });
+});
 
 const r = express.Router();
 

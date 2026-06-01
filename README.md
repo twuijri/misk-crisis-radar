@@ -14,6 +14,10 @@ The interface is **bilingual (English / العربية)** — toggle from the bu
 the top bar. Arabic switches the whole layout to RTL. Updates appear for
 everyone within a few seconds (light polling).
 
+The dashboard is **public and read-only** for anyone who opens the link. To
+add, edit or delete cases an editor clicks **Login** and enters the editor
+**access code**. Reads are open; the API enforces the code on every write.
+
 ---
 
 ## ما الذي يفعله هذا الستاك؟ (نظرة سريعة)
@@ -67,8 +71,7 @@ visibility to **Public**:
    | `POSTGRES_USER` | e.g. `misk` |
    | `POSTGRES_PASSWORD` | a strong password (required) |
    | `POSTGRES_DB` | e.g. `misk` |
-   | `API_TOKEN` | optional shared Bearer token, or leave empty |
-   | `ACCESS_CODE` | optional page access code, or leave empty |
+   | `ACCESS_CODE` | editor code — required to add/edit/delete (reads stay public) |
 
 3. **Deploy / Up**. The API auto-creates its database tables on first boot.
 4. Open `https://misk.i3u.us`. The live dot turns teal = connected.
@@ -83,7 +86,7 @@ The stack is already wired for **Traefik** on domain `misk.i3u.us`
 ## 4. Run locally (optional test)
 
 ```bash
-POSTGRES_PASSWORD=test API_TOKEN= ACCESS_CODE= docker compose up --build
+POSTGRES_PASSWORD=test ACCESS_CODE=1234 docker compose up --build
 ```
 
 (For a purely local run without Traefik you can add a `ports:` mapping to the
@@ -96,14 +99,13 @@ POSTGRES_PASSWORD=test API_TOKEN= ACCESS_CODE= docker compose up --build
 `index.html` ships with placeholders:
 
 ```js
-API_BASE  = "__API_BASE__"
-API_TOKEN = "__API_TOKEN__"
-ACCESS_CODE = "__ACCESS_CODE__"
+API_BASE = "__API_BASE__"
 ```
 
 On container start, [`docker-entrypoint.sh`](docker-entrypoint.sh) copies the
-template into the nginx web root and `sed`-replaces those placeholders with the
-environment variables. `API_BASE` defaults to `/api` (same origin).
+template into the nginx web root and `sed`-replaces this placeholder.
+`API_BASE` defaults to `/api` (same origin). The editor access code is **never**
+embedded in the page — the editor types it at login and the API checks it.
 
 ## Data model
 
@@ -123,5 +125,4 @@ The API auto-migrates this schema (in [`api/server.js`](api/server.js)):
 | Risk dimensions / weights | `DIMENSIONS`, `WEIGHTS` in `index.html` (and `DIMS` in `api/server.js`) |
 | Arabic / English wording | `I18N` block in `index.html` |
 | Domain / routing | Traefik labels in `compose.yaml` |
-| Access gate | `ACCESS_CODE` env var |
-| API auth | `API_TOKEN` env var |
+| Editor access code | `ACCESS_CODE` env var |

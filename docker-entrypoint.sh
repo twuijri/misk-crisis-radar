@@ -10,8 +10,6 @@ cp "$SRC" "$DEST"
 
 sed -i \
   -e "s|__API_BASE__|${API_BASE:-/api}|g" \
-  -e "s|__API_TOKEN__|${API_TOKEN:-}|g" \
-  -e "s|__ACCESS_CODE__|${ACCESS_CODE:-}|g" \
   "$DEST"
 
 exec nginx -g 'daemon off;'
