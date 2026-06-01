@@ -4,10 +4,26 @@ services:
     image: misk-crisis-radar:latest
     container_name: misk-crisis-radar
     restart: unless-stopped
-    ports:
-      # host:container — change 8080 if the port is already in use on your server
-      - "8080:80"
+    # No published ports needed — Traefik reaches the container over the shared
+    # network. Uncomment to also expose it directly for testing.
+    # ports:
+    #   - "8080:80"
     environment:
       - SUPABASE_URL=${SUPABASE_URL:-}
       - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY:-}
       - ACCESS_CODE=${ACCESS_CODE:-}
+    networks:
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.misk.rule=Host(`misk.i3u.us`)"
+      - "traefik.http.routers.misk.entrypoints=web"
+      - "traefik.http.services.misk.loadbalancer.server.port=80"
+      # Tell Traefik which network to use (must match the network below).
+      - "traefik.docker.network=proxy"
+
+networks:
+  # This must be the SAME external network your Traefik container is on.
+  # Rename "proxy" if your Traefik uses a different network (e.g. "traefik", "web").
+  proxy:
+    external: true
