@@ -1,0 +1,13 @@
+services:
+  crisis-radar:
+    build: .
+    image: misk-crisis-radar:latest
+    container_name: misk-crisis-radar
+    restart: unless-stopped
+    ports:
+      # host:container — change 8080 if the port is already in use on your server
+      - "8080:80"
+    environment:
+      - SUPABASE_URL=${SUPABASE_URL:-}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY:-}
+      - ACCESS_CODE=${ACCESS_CODE:-}

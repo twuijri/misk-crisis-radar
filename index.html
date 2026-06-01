@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Misk · Crisis Radar</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --pine:#0A3D2E;--pine-2:#0C4A38;--pine-3:#0E573F;
+  --lime:#C3D72D;--teal:#2EB49A;--teal-dim:#1F8C78;
+  --paper:#F3F5EF;--card:#FFFFFF;--ink:#0A2A20;--muted:#5E7268;--line:#E2E8DD;
+  --high:#E5484D;--med:#EE9B2E;--low:#2EB49A;
+  --shadow:0 1px 2px rgba(10,61,46,.06),0 8px 28px rgba(10,61,46,.08);--radius:16px;
+}
+*{box-sizing:border-box}html,body{margin:0;padding:0}
+body{font-family:'Outfit','Tajawal',system-ui,sans-serif;background:var(--paper);color:var(--ink);-webkit-font-smoothing:antialiased;line-height:1.45}
+button{font-family:inherit;cursor:pointer;border:none;background:none}
+input,select,textarea{font-family:inherit}
+.wrap{max-width:1240px;margin:0 auto;padding:0 24px 64px}
+header.top{position:relative;background:var(--pine);color:#fff;overflow:hidden;border-bottom:4px solid var(--lime)}
+header.top .stripes{position:absolute;top:0;right:0;width:240px;height:100%;background:repeating-linear-gradient(115deg,var(--lime) 0 14px,transparent 14px 34px);opacity:.9;clip-path:polygon(28% 0,100% 0,100% 100%,0 100%)}
+header.top .barInner{position:relative;max-width:1240px;margin:0 auto;padding:18px 24px;display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:14px;min-width:0}
+.brand .logo{height:42px;width:42px;border-radius:11px;background:var(--lime);display:grid;place-items:center;color:var(--pine);font-weight:800;font-size:20px;flex:0 0 auto}
+.brand .logo img{height:100%;width:100%;object-fit:contain;border-radius:11px}
+.brand .names{display:flex;flex-direction:column;line-height:1.05}
+.brand .ar{font-family:'Tajawal';font-weight:800;font-size:19px}
+.brand .en{font-weight:700;font-size:12px;letter-spacing:3px;opacity:.7;text-transform:uppercase}
+.titleblock{margin-left:6px;padding-left:20px;border-left:1px solid rgba(255,255,255,.18)}
+.titleblock h1{margin:0;font-size:21px;font-weight:700;letter-spacing:-.3px}
+.titleblock p{margin:2px 0 0;font-size:12.5px;color:rgba(255,255,255,.62);font-weight:500}
+.top .spacer{flex:1 1 auto}
+.live{display:flex;align-items:center;gap:8px;font-size:12.5px;color:rgba(255,255,255,.8);font-weight:500;background:rgba(255,255,255,.06);padding:7px 12px;border-radius:999px}
+.live .dot{height:8px;width:8px;border-radius:50%;background:var(--teal);animation:pulse 2.2s infinite}
+.live.off .dot{background:var(--med);animation:none}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(46,180,154,.55)}70%{box-shadow:0 0 0 9px rgba(46,180,154,0)}100%{box-shadow:0 0 0 0 rgba(46,180,154,0)}}
+.btn{display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:13.5px;padding:10px 16px;border-radius:11px;transition:.16s;white-space:nowrap}
+.btn.primary{background:var(--lime);color:var(--pine)}.btn.primary:hover{background:#cfe23c;transform:translateY(-1px)}
+.btn.ghost{background:rgba(255,255,255,.1);color:#fff}.btn.ghost:hover{background:rgba(255,255,255,.18)}
+.btn.sm{padding:7px 12px;font-size:12.5px;border-radius:9px}
+.btn.dark{background:var(--pine);color:#fff}.btn.dark:hover{background:var(--pine-3)}
+.btn.line{background:#fff;color:var(--ink);border:1px solid var(--line)}.btn.line:hover{border-color:var(--teal);color:var(--teal-dim)}
+.cfg{display:none;background:#FFF7E6;border:1px solid #F2D89B;color:#7a5a12;border-radius:12px;padding:14px 18px;margin:20px 0 0;font-size:13.5px}
+.cfg b{color:#5c4309}.cfg code{background:#fff;border:1px solid #eadbb0;padding:1px 6px;border-radius:6px;font-size:12.5px}
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-top:22px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.stat::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--teal)}
+.stat.s-total::before{background:var(--pine)}.stat.s-high::before{background:var(--high)}.stat.s-med::before{background:var(--med)}.stat.s-low::before{background:var(--low)}.stat.s-esc::before{background:var(--lime)}
+.stat .n{font-size:30px;font-weight:800;letter-spacing:-1px;line-height:1}
+.stat .l{font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.6px;margin-top:8px}
+.grid{display:grid;grid-template-columns:1.25fr 1fr;gap:18px;margin-top:18px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+.panel .head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px 20px;border-bottom:1px solid var(--line)}
+.panel .head h2{margin:0;font-size:15px;font-weight:700;letter-spacing:-.2px}
+.panel .head .sub{font-size:12px;color:var(--muted);font-weight:500}
+.scope{background:radial-gradient(circle at 50% 50%,#0E5740 0%,#0A3D2E 62%,#072c21 100%);border-radius:0 0 var(--radius) var(--radius);padding:10px 10px 4px}
+#radar{width:100%;height:auto;display:block}
+.r-grid{fill:none;stroke:rgba(255,255,255,.10);stroke-width:1}
+.r-spoke{stroke:rgba(255,255,255,.08);stroke-width:1}
+.r-tick{fill:rgba(255,255,255,.32);font-size:8.5px;font-weight:600}
+.r-axis{fill:rgba(255,255,255,.82);font-size:11px;font-weight:600;font-family:'Outfit'}
+.r-axis-val{fill:var(--lime);font-size:10px;font-weight:700}
+.r-avg{fill:rgba(46,180,154,.16);stroke:var(--teal);stroke-width:1.4;stroke-dasharray:4 3}
+.r-sel{fill-opacity:.22;stroke-width:2.2}
+.r-cap{text-align:center;color:rgba(255,255,255,.9);font-size:12.5px;font-weight:600;padding:6px 0 10px}
+.r-cap span{color:rgba(255,255,255,.55);font-weight:500}
+.legwrap{padding:18px 20px;display:flex;flex-direction:column;gap:16px}
+.lt{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:10px}
+.cls-row{display:flex;flex-direction:column;gap:9px}
+.cls{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:500}
+.cls .sw{height:12px;width:12px;border-radius:50%}.cls .ct{margin-left:auto;font-weight:700}
+.dimlist{display:flex;flex-direction:column;gap:7px}
+.dimlist .di{font-size:12.5px;color:var(--muted)}.dimlist .di b{color:var(--ink);font-weight:600}
+.filters{display:flex;flex-wrap:wrap;gap:7px}
+.chip{font-size:12px;font-weight:600;padding:6px 11px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--muted);transition:.14s}
+.chip:hover{border-color:var(--teal)}.chip.on{background:var(--pine);color:#fff;border-color:var(--pine)}
+.toggle{display:flex;align-items:center;gap:9px;font-size:12.5px;font-weight:500;color:var(--muted);cursor:pointer}
+.toggle input{accent-color:var(--teal);width:15px;height:15px}
+.tablewrap{margin-top:18px}
+.toolbar{display:flex;align-items:center;gap:12px;padding:14px 6px;flex-wrap:wrap}
+.search{flex:1 1 240px;position:relative}
+.search input{width:100%;padding:10px 14px 10px 38px;border:1px solid var(--line);border-radius:11px;font-size:13.5px;background:#fff}
+.search input:focus{outline:none;border-color:var(--teal)}
+.search svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);opacity:.45}
+table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+thead th{text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);padding:13px 16px;background:#FAFBF8;border-bottom:1px solid var(--line)}
+tbody td{padding:13px 16px;font-size:13.5px;border-bottom:1px solid #EEF2EA;vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}tbody tr{transition:.12s}
+tbody tr:hover{background:#F7FAF4;cursor:pointer}tbody tr.sel{background:#EEF6EE}
+.t-title{font-weight:600}.t-sub{font-size:11.5px;color:var(--muted);margin-top:2px}
+.cls-badge{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;padding:3px 10px;border-radius:999px;white-space:nowrap}
+.cls-badge .d{height:7px;width:7px;border-radius:50%}
+.cb-High{background:#FBE9E9;color:#B4252A}.cb-Medium{background:#FCF0DD;color:#9A6410}.cb-Low{background:#DEF3EE;color:#1B7A66}
+.st{font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:7px}
+.st-Active{background:#FCF0DD;color:#9A6410}.st-Monitoring{background:#E7EEF2;color:#3F5B6B}.st-Escalated{background:#FBE9E9;color:#B4252A}.st-Resolved{background:#E9EEE7;color:#5E7268}
+.rowact{display:flex;gap:6px;justify-content:flex-end}
+.iconbtn{height:30px;width:30px;border-radius:8px;display:grid;place-items:center;border:1px solid var(--line);background:#fff;color:var(--muted)}
+.iconbtn:hover{border-color:var(--teal);color:var(--teal-dim)}.iconbtn.del:hover{border-color:var(--high);color:var(--high)}
+.empty{padding:54px 20px;text-align:center;color:var(--muted)}.empty h3{margin:0 0 6px;color:var(--ink);font-size:16px}.empty p{margin:0 0 18px;font-size:13.5px}
+.overlay{position:fixed;inset:0;background:rgba(7,30,22,.45);backdrop-filter:blur(3px);display:none;align-items:flex-start;justify-content:center;padding:40px 20px;z-index:50;overflow-y:auto}
+.overlay.open{display:flex}
+.modal{background:#fff;border-radius:18px;width:100%;max-width:580px;box-shadow:0 24px 70px rgba(7,30,22,.35);animation:rise .22s ease}
+.drawer{max-width:620px}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.modal .mhead{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--line)}
+.modal .mhead h3{margin:0;font-size:17px;font-weight:700}
+.modal .mbody{padding:22px 24px}
+.modal .mfoot{padding:16px 24px;border-top:1px solid var(--line);display:flex;gap:10px;justify-content:flex-end;background:#FAFBF8;border-radius:0 0 18px 18px}
+.x{height:32px;width:32px;border-radius:9px;display:grid;place-items:center;color:var(--muted)}.x:hover{background:var(--paper)}
+.field{margin-bottom:15px}.field.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.field label{display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px;letter-spacing:.3px}
+.field label .hint{display:block;font-weight:500;color:#9aa89f;font-size:11px;margin-top:2px;letter-spacing:0}
+.field label .req{color:var(--high)}
+.field input,.field select,.field textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:13.5px;background:#fff;color:var(--ink)}
+.field textarea{resize:vertical;min-height:70px}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(46,180,154,.12)}
+.err{display:none;color:var(--high);font-size:12px;margin-top:6px;font-weight:600}
+.sectionlbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin:6px 0 12px;padding-top:6px;border-top:1px solid var(--line)}
+.dimgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.preview{display:flex;align-items:center;gap:12px;background:#FAFBF8;border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:14px 0 4px}
+.preview .pscore{font-size:24px;font-weight:800;letter-spacing:-.5px}.preview .psub{font-size:11.5px;color:var(--muted);font-weight:600}
+.d-badges{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.d-radarwrap{background:radial-gradient(circle at 50% 50%,#0E5740,#0A3D2E);border-radius:14px;margin:16px 0;padding:8px}
+.d-radarwrap svg{width:100%;height:auto;display:block}
+.bars{display:flex;flex-direction:column;gap:9px;margin:14px 0}
+.bar{display:grid;grid-template-columns:130px 1fr 30px;align-items:center;gap:10px;font-size:12.5px}
+.bar .bl{font-weight:600;color:var(--ink)}
+.bar .bt{height:8px;background:#EEF2EA;border-radius:999px;overflow:hidden}
+.bar .bf{height:100%;border-radius:999px}
+.bar .bv{font-weight:700;text-align:right}
+.d-block{margin-top:14px}.d-block .k{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:5px}
+.d-block .v{background:#FAFBF8;border:1px solid var(--line);border-radius:11px;padding:12px;font-size:13.5px;white-space:pre-wrap}
+.d-block .v a{color:var(--teal-dim);word-break:break-all}
+.notes h4{margin:20px 0 12px;font-size:13px;font-weight:700}
+.note{background:#FAFBF8;border:1px solid var(--line);border-left:3px solid var(--teal);border-radius:10px;padding:11px 13px;margin-bottom:9px}
+.note .nm{font-size:11.5px;color:var(--muted);font-weight:600;margin-bottom:4px;display:flex;justify-content:space-between}.note .nt{font-size:13.5px;white-space:pre-wrap}
+.addnote{display:flex;gap:8px;margin-top:10px}.addnote textarea{flex:1;min-height:42px}
+.gate{position:fixed;inset:0;background:var(--pine);display:none;align-items:center;justify-content:center;z-index:90;padding:24px}.gate.open{display:flex}
+.gate .stripes{position:absolute;top:0;right:0;width:42vw;height:100%;background:repeating-linear-gradient(115deg,var(--lime) 0 18px,transparent 18px 44px);opacity:.85;clip-path:polygon(30% 0,100% 0,100% 100%,0 100%)}
+.gatecard{position:relative;background:#fff;border-radius:20px;padding:34px;width:100%;max-width:380px;box-shadow:0 30px 80px rgba(0,0,0,.4)}
+.gatecard .logo{height:46px;width:46px;border-radius:12px;background:var(--lime);display:grid;place-items:center;color:var(--pine);font-weight:800;font-size:22px;margin-bottom:16px}
+.gatecard h3{margin:0 0 4px;font-size:19px}.gatecard p{margin:0 0 18px;font-size:13px;color:var(--muted)}
+.gatecard input{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:11px;font-size:14px;margin-bottom:12px}.gatecard input:focus{outline:none;border-color:var(--teal)}
+.gate-err{color:var(--high);font-size:12.5px;font-weight:600;margin:-4px 0 12px;display:none}
+footer.foot{text-align:center;color:var(--muted);font-size:12px;margin-top:38px}footer.foot b{color:var(--pine);font-weight:700}
+@media(max-width:900px){.stats{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}.titleblock{border-left:none;padding-left:0;margin-left:0}.field.row2,.dimgrid{grid-template-columns:1fr}}
+
+/* ---- RTL (Arabic) overrides ---- */
+[dir="rtl"] body{font-family:'Tajawal','Outfit',system-ui,sans-serif}
+[dir="rtl"] thead th{text-align:right}
+[dir="rtl"] .titleblock{border-left:none;border-right:1px solid rgba(255,255,255,.18);padding-left:0;padding-right:20px;margin-left:0;margin-right:6px}
+[dir="rtl"] .stat::before{left:auto;right:0}
+[dir="rtl"] .stat.s-total::before,[dir="rtl"] .stat.s-high::before,[dir="rtl"] .stat.s-med::before,[dir="rtl"] .stat.s-low::before,[dir="rtl"] .stat.s-esc::before{left:auto;right:0}
+[dir="rtl"] .cls .ct{margin-left:0;margin-right:auto}
+[dir="rtl"] .search input{padding:10px 38px 10px 14px}
+[dir="rtl"] .search svg{left:auto;right:12px}
+[dir="rtl"] .rowact{justify-content:flex-start}
+[dir="rtl"] .bar .bv{text-align:left}
+[dir="rtl"] .note{border-left:none;border-right:3px solid var(--teal)}
+[dir="rtl"] .modal .mfoot{justify-content:flex-start}
+[dir="rtl"] header.top .stripes{right:auto;left:0;clip-path:polygon(0 0,72% 0,100% 100%,0 100%)}
+[dir="rtl"] .gate .stripes{right:auto;left:0;clip-path:polygon(0 0,70% 0,100% 100%,0 100%)}
+@media(max-width:900px){[dir="rtl"] .titleblock{border-right:none;padding-right:0;margin-right:0}}
+</style>
+</head>
+<body>
+
+<div class="gate" id="gate">
+  <div class="stripes"></div>
+  <div class="gatecard">
+    <div class="logo">M</div>
+    <h3 data-i18n="app_title">Crisis Radar</h3>
+    <p data-i18n="gate_sub">Misk Foundation · Strategic Communication. Enter the team access code to continue.</p>
+    <input type="password" id="gateInput" data-i18n-ph="access_code" placeholder="Access code" autocomplete="off" />
+    <div class="gate-err" id="gateErr" data-i18n="gate_err">Incorrect code. Try again.</div>
+    <button class="btn primary" style="width:100%;justify-content:center" id="gateBtn" data-i18n="enter_workspace">Enter workspace</button>
+  </div>
+</div>
+
+<header class="top">
+  <div class="stripes"></div>
+  <div class="barInner">
+    <div class="brand">
+      <div class="logo"><img id="miskLogo" alt="Misk" src="" onerror="this.style.display='none';this.parentNode.textContent='M'" /></div>
+      <div class="names"><span class="ar">مسك</span><span class="en" data-i18n="org_name">Misk Foundation</span></div>
+      <div class="titleblock"><h1 data-i18n="app_title">Crisis Radar</h1><p data-i18n="app_subtitle">Live perception &amp; risk monitoring · Strategic Communication</p></div>
+    </div>
+    <div class="spacer"></div>
+    <div class="live off" id="liveBadge"><span class="dot"></span><span id="liveText" data-i18n="live_connecting">Connecting…</span></div>
+    <button class="btn ghost" id="langBtn">العربية</button>
+    <button class="btn ghost" id="refreshBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6"/></svg><span data-i18n="refresh">Refresh</span></button>
+    <button class="btn primary" id="addBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M12 5v14M5 12h14"/></svg><span data-i18n="add_case">Add New Case</span></button>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="cfg" id="cfgBanner" data-i18n-html="cfg_banner"><b>One-time setup:</b> paste your Supabase <code>URL</code> and <code>anon key</code> into the <code>SUPABASE_CONFIG</code> block near the top of the script. Until then it runs in demo mode and nothing is saved.</div>
+
+  <section class="stats">
+    <div class="stat s-total"><div class="n" id="kTotal">0</div><div class="l" data-i18n="stat_total">Total Cases</div></div>
+    <div class="stat s-high"><div class="n" id="kHigh">0</div><div class="l" data-i18n="stat_high">High</div></div>
+    <div class="stat s-med"><div class="n" id="kMed">0</div><div class="l" data-i18n="stat_med">Medium</div></div>
+    <div class="stat s-low"><div class="n" id="kLow">0</div><div class="l" data-i18n="stat_low">Low</div></div>
+    <div class="stat s-esc"><div class="n" id="kEsc">0</div><div class="l" data-i18n="stat_esc">Escalated</div></div>
+  </section>
+
+  <section class="grid">
+    <div class="panel">
+      <div class="head">
+        <div><h2 data-i18n="radar_title">Crisis Radar</h2><span class="sub" data-i18n="radar_sub">6 dimensions · scored 1–5</span></div>
+        <button class="btn line sm" id="portfolioBtn" data-i18n="portfolio_view">Portfolio view</button>
+      </div>
+      <div class="scope">
+        <svg id="radar" viewBox="0 0 520 470" xmlns="http://www.w3.org/2000/svg"><g id="radarG"></g></svg>
+        <div class="r-cap" id="radarCap"></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="head"><h2 data-i18n="cls_filters_title">Classification &amp; Filters</h2></div>
+      <div class="legwrap">
+        <div><div class="lt" data-i18n="overall_cls">Overall classification</div>
+          <div class="cls-row">
+            <div class="cls"><span class="sw" style="background:var(--high)"></span><span data-i18n="cls_High">High</span> <span class="ct" id="cHigh">0</span></div>
+            <div class="cls"><span class="sw" style="background:var(--med)"></span><span data-i18n="cls_Medium">Medium</span> <span class="ct" id="cMed">0</span></div>
+            <div class="cls"><span class="sw" style="background:var(--low)"></span><span data-i18n="cls_Low">Low</span> <span class="ct" id="cLow">0</span></div>
+          </div>
+        </div>
+        <div><div class="lt" data-i18n="six_dims">The six dimensions</div><div class="dimlist" id="dimLegend"></div></div>
+        <div><div class="lt" data-i18n="filter_status">Filter by status</div><div class="filters" id="statusFilters"></div></div>
+        <div><div class="lt" data-i18n="filter_category">Filter by category</div><div class="filters" id="catFilters"></div></div>
+        <label class="toggle"><input type="checkbox" id="hideResolved" checked /> <span data-i18n="exclude_resolved">Exclude resolved from radar &amp; averages</span></label>
+      </div>
+    </div>
+  </section>
+
+  <section class="tablewrap">
+    <div class="toolbar">
+      <div class="search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3-3"/></svg><input id="searchInput" data-i18n-ph="search_ph" placeholder="Search cases, summaries…" /></div>
+      <button class="btn line sm" id="exportBtn" data-i18n="export_csv">Export CSV</button>
+    </div>
+    <table>
+      <thead><tr><th data-i18n="th_case">Case</th><th data-i18n="th_category">Category</th><th data-i18n="th_classification">Classification</th><th data-i18n="th_score">Score</th><th data-i18n="th_status">Status</th><th data-i18n="th_updated">Updated</th><th style="text-align:right" data-i18n="th_actions">Actions</th></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <div class="empty" id="emptyState" style="display:none"><h3 data-i18n="empty_title">No cases match your view</h3><p data-i18n="empty_sub">Add your first live case to begin monitoring.</p><button class="btn dark" onclick="openForm()" data-i18n="add_case_plus">+ Add New Case</button></div>
+  </section>
+
+  <footer class="foot" data-i18n-html="footer"><b>Misk · Crisis Radar</b> — shared team workspace. Scores roll up to a Low / Medium / High classification automatically.</footer>
+</div>
+
+<!-- ADD / EDIT -->
+<div class="overlay" id="formOverlay"><div class="modal">
+  <div class="mhead"><h3 id="formTitle">Add New Case</h3><button class="x" onclick="closeForm()">✕</button></div>
+  <div class="mbody">
+    <input type="hidden" id="f_id" />
+    <div class="field"><label><span data-i18n="f_title_label">Title</span> <span class="req">*</span><span class="hint" data-i18n="f_title_hint">What's the issue?</span></label><input id="f_title" data-i18n-ph="f_title_ph" placeholder="What's the issue?" /><div class="err" id="e_title" data-i18n="err_title">Title is required.</div></div>
+    <div class="field row2">
+      <div><label><span data-i18n="f_category_label">Category</span> <span class="req">*</span></label><select id="f_category"></select></div>
+      <div><label data-i18n="f_status_label">Status</label><select id="f_status"></select></div>
+    </div>
+    <div class="field"><label><span data-i18n="f_summary_label">Summary</span><span class="hint" data-i18n="f_summary_hint">Brief description</span></label><textarea id="f_summary" data-i18n-ph="f_summary_ph" placeholder="Brief description"></textarea></div>
+    <div class="sectionlbl" data-i18n="risk_scoring">Risk scoring — each 1 (low) to 5 (high)</div>
+    <div class="dimgrid" id="dimFields"></div>
+    <div class="preview"><div class="pscore" id="pvScore">3.0</div><div><div id="pvCls" class="cls-badge cb-Medium"><span class="d"></span>Medium</div><div class="psub" data-i18n="auto_cls">Auto-classified from the 6 dimensions</div></div></div>
+    <div class="field" style="margin-top:14px"><label><span data-i18n="f_expected_label">Expected Impact</span><span class="hint" data-i18n="f_expected_hint">What happens if this escalates?</span></label><textarea id="f_expected_impact" data-i18n-ph="f_expected_ph" placeholder="What happens if this escalates?"></textarea></div>
+    <div class="field"><label><span data-i18n="f_action_label">Recommended Action</span><span class="hint" data-i18n="f_action_hint">What should you do?</span></label><textarea id="f_recommended_action" data-i18n-ph="f_action_ph" placeholder="What should you do?"></textarea></div>
+    <div class="field"><label><span data-i18n="f_refs_label">References</span><span class="hint" data-i18n="f_refs_hint">Paste any links (X, news, etc.)</span></label><textarea id="f_reference_links" data-i18n-ph="f_refs_ph" placeholder="Paste any links (X, news, etc.)"></textarea></div>
+  </div>
+  <div class="mfoot"><button class="btn line" onclick="closeForm()" data-i18n="cancel">Cancel</button><button class="btn primary" id="saveBtn" data-i18n="save_case">Save case</button></div>
+</div></div>
+
+<!-- DETAIL -->
+<div class="overlay" id="detailOverlay"><div class="modal drawer">
+  <div class="mhead"><h3 id="d_title">Case</h3><button class="x" onclick="closeDetail()">✕</button></div>
+  <div class="mbody">
+    <div class="d-badges" id="d_badges"></div>
+    <div class="d-radarwrap"><svg id="d_radar" viewBox="0 0 520 460" xmlns="http://www.w3.org/2000/svg"></svg></div>
+    <div class="bars" id="d_bars"></div>
+    <div class="d-block"><div class="k" data-i18n="d_summary_k">Summary</div><div class="v" id="d_summary"></div></div>
+    <div class="d-block"><div class="k" data-i18n="d_expected_k">Expected impact</div><div class="v" id="d_expected"></div></div>
+    <div class="d-block"><div class="k" data-i18n="d_action_k">Recommended action</div><div class="v" id="d_action"></div></div>
+    <div class="d-block"><div class="k" data-i18n="d_refs_k">References</div><div class="v" id="d_refs"></div></div>
+    <div class="notes"><h4 data-i18n="monitoring_notes">Monitoring notes</h4><div id="d_notes"></div>
+      <div class="addnote"><textarea id="noteInput" data-i18n-ph="add_update_ph" placeholder="Add a monitoring update…"></textarea><button class="btn dark" id="noteBtn" data-i18n="add">Add</button></div>
+    </div>
+  </div>
+  <div class="mfoot"><button class="btn line del" id="d_delete" data-i18n="delete">Delete</button><button class="btn dark" id="d_edit" data-i18n="edit_case">Edit case</button></div>
+</div></div>
+
+<script>
+/* ============================================================
+   SUPABASE CONFIG
+   In the Docker stack these placeholders are replaced at
+   container start from the SUPABASE_URL / SUPABASE_ANON_KEY /
+   ACCESS_CODE environment variables (see docker-entrypoint.sh).
+   You can also hard-code them here for a plain static deploy.
+   ============================================================ */
+const SUPABASE_CONFIG = {
+  url: "__SUPABASE_URL__",
+  anonKey: "__SUPABASE_ANON_KEY__"
+};
+let ACCESS_CODE = "__ACCESS_CODE__";                 // shared code; "" = no gate
+if (ACCESS_CODE.indexOf("__") === 0) ACCESS_CODE = "";   // unsubstituted placeholder → no gate
+
+const CATEGORIES = ["Reputational","Media & Public","Social / Digital","Stakeholder","Operational","Governance"];
+const STATUSES   = ["Active","Monitoring","Escalated","Resolved"];
+
+/* The six radar dimensions. value 1..5; opts[0] = score 1 ... opts[4] = score 5 (English defaults) */
+const DIMENSIONS = [
+  {key:"severity",         label:"Severity",         q:"How serious is this right now?",            opts:["Minimal","Low","Moderate","High","Severe"]},
+  {key:"urgency",          label:"Urgency",          q:"How quickly must we act?",                   opts:["Can wait","Low","Soon","Pressing","Immediate"]},
+  {key:"reach",            label:"Reach",            q:"How many people know or care?",              opts:["Isolated","Limited","Notable","Wide","Viral / mass"]},
+  {key:"sentiment",        label:"Sentiment",        q:"How negative is public feeling?",            opts:["Neutral","Slightly neg.","Negative","Very neg.","Hostile"]},
+  {key:"escalation_risk",  label:"Escalation Risk",  q:"How likely is this to escalate?",            opts:["Rare","Unlikely","Possible","Likely","Almost certain"]},
+  {key:"strategic_impact", label:"Strategic Impact", q:"Impact on Misk's reputation & objectives?",  opts:["Negligible","Minor","Moderate","Major","Critical"]}
+];
+/* equal weights by default — adjust here to weight a dimension more heavily */
+const WEIGHTS = {severity:1, urgency:1, reach:1, sentiment:1, escalation_risk:1, strategic_impact:1};
+const CLS_COLOR = {High:"#E5484D",Medium:"#EE9B2E",Low:"#2EB49A"};
+
+/* ============================================================
+   I18N  (English / Arabic)
+   ============================================================ */
+const I18N = {
+  en: {
+    app_title:"Crisis Radar", app_subtitle:"Live perception & risk monitoring · Strategic Communication", org_name:"Misk Foundation",
+    refresh:"Refresh", add_case:"Add New Case",
+    stat_total:"Total Cases", stat_high:"High", stat_med:"Medium", stat_low:"Low", stat_esc:"Escalated",
+    radar_title:"Crisis Radar", radar_sub:"6 dimensions · scored 1–5", portfolio_view:"Portfolio view",
+    cls_filters_title:"Classification & Filters", overall_cls:"Overall classification",
+    cls_High:"High", cls_Medium:"Medium", cls_Low:"Low",
+    six_dims:"The six dimensions", filter_status:"Filter by status", filter_category:"Filter by category",
+    exclude_resolved:"Exclude resolved from radar & averages", export_csv:"Export CSV",
+    th_case:"Case", th_category:"Category", th_classification:"Classification", th_score:"Score", th_status:"Status", th_updated:"Updated", th_actions:"Actions",
+    empty_title:"No cases match your view", empty_sub:"Add your first live case to begin monitoring.", add_case_plus:"+ Add New Case",
+    f_title_label:"Title", f_title_hint:"What's the issue?", f_title_ph:"What's the issue?", err_title:"Title is required.",
+    f_category_label:"Category", f_status_label:"Status",
+    f_summary_label:"Summary", f_summary_hint:"Brief description", f_summary_ph:"Brief description",
+    risk_scoring:"Risk scoring — each 1 (low) to 5 (high)", auto_cls:"Auto-classified from the 6 dimensions",
+    f_expected_label:"Expected Impact", f_expected_hint:"What happens if this escalates?", f_expected_ph:"What happens if this escalates?",
+    f_action_label:"Recommended Action", f_action_hint:"What should you do?", f_action_ph:"What should you do?",
+    f_refs_label:"References", f_refs_hint:"Paste any links (X, news, etc.)", f_refs_ph:"Paste any links (X, news, etc.)",
+    cancel:"Cancel", save_case:"Save case",
+    d_summary_k:"Summary", d_expected_k:"Expected impact", d_action_k:"Recommended action", d_refs_k:"References",
+    monitoring_notes:"Monitoring notes", add:"Add", delete:"Delete", edit_case:"Edit case",
+    search_ph:"Search cases, summaries…", add_update_ph:"Add a monitoring update…", access_code:"Access code",
+    gate_sub:"Misk Foundation · Strategic Communication. Enter the team access code to continue.",
+    gate_err:"Incorrect code. Try again.", enter_workspace:"Enter workspace",
+    cfg_banner:'<b>One-time setup:</b> paste your Supabase <code>URL</code> and <code>anon key</code> into the <code>SUPABASE_CONFIG</code> block near the top of the script (or set the env vars in the Docker stack). Until then it runs in demo mode and nothing is saved.',
+    footer:'<b>Misk · Crisis Radar</b> — shared team workspace. Scores roll up to a Low / Medium / High classification automatically.',
+    live_connecting:"Connecting…", live_synced:"Live · synced", live_error:"Connection error", live_demo:"Demo mode · not connected",
+    portfolio_avg:"Portfolio average", score:"score", case:"case", cases:"cases", dashed_line:"dashed line",
+    all:"All", team:"Team", loading:"Loading…", no_notes:"No monitoring notes yet.",
+    confirm_delete:"Delete this case permanently?", could_not_save:"Could not save: ", could_not_delete:"Could not delete: ",
+    connect_supabase:"Connect Supabase to save notes.", add_case_title:"Add New Case", edit_case_title:"Edit Case"
+  },
+  ar: {
+    app_title:"رادار الأزمات", app_subtitle:"رصد حي للانطباع والمخاطر · الاتصال الاستراتيجي", org_name:"مؤسسة مسك",
+    refresh:"تحديث", add_case:"إضافة حالة جديدة",
+    stat_total:"إجمالي الحالات", stat_high:"مرتفع", stat_med:"متوسط", stat_low:"منخفض", stat_esc:"مُصعّدة",
+    radar_title:"رادار الأزمات", radar_sub:"6 أبعاد · مقياس 1–5", portfolio_view:"عرض المحفظة",
+    cls_filters_title:"التصنيف والمرشّحات", overall_cls:"التصنيف العام",
+    cls_High:"مرتفع", cls_Medium:"متوسط", cls_Low:"منخفض",
+    six_dims:"الأبعاد الستة", filter_status:"التصفية حسب الوضع", filter_category:"التصفية حسب الفئة",
+    exclude_resolved:"استبعاد المُغلقة من الرادار والمتوسطات", export_csv:"تصدير CSV",
+    th_case:"الحالة", th_category:"الفئة", th_classification:"التصنيف", th_score:"النتيجة", th_status:"الوضع", th_updated:"آخر تحديث", th_actions:"إجراءات",
+    empty_title:"لا توجد حالات مطابقة", empty_sub:"أضف أول حالة لبدء الرصد.", add_case_plus:"+ إضافة حالة جديدة",
+    f_title_label:"العنوان", f_title_hint:"ما هي المشكلة؟", f_title_ph:"ما هي المشكلة؟", err_title:"العنوان مطلوب.",
+    f_category_label:"الفئة", f_status_label:"الوضع",
+    f_summary_label:"الملخص", f_summary_hint:"وصف موجز", f_summary_ph:"وصف موجز",
+    risk_scoring:"تقييم المخاطر — كل بُعد من 1 (منخفض) إلى 5 (مرتفع)", auto_cls:"تصنيف تلقائي من الأبعاد الستة",
+    f_expected_label:"الأثر المتوقع", f_expected_hint:"ماذا يحدث إذا تصاعدت؟", f_expected_ph:"ماذا يحدث إذا تصاعدت؟",
+    f_action_label:"الإجراء الموصى به", f_action_hint:"ما الذي ينبغي فعله؟", f_action_ph:"ما الذي ينبغي فعله؟",
+    f_refs_label:"المراجع", f_refs_hint:"ألصق أي روابط (إكس، أخبار، إلخ)", f_refs_ph:"ألصق أي روابط (إكس، أخبار، إلخ)",
+    cancel:"إلغاء", save_case:"حفظ الحالة",
+    d_summary_k:"الملخص", d_expected_k:"الأثر المتوقع", d_action_k:"الإجراء الموصى به", d_refs_k:"المراجع",
+    monitoring_notes:"ملاحظات الرصد", add:"إضافة", delete:"حذف", edit_case:"تعديل الحالة",
+    search_ph:"ابحث في الحالات والملخصات…", add_update_ph:"أضف تحديث رصد…", access_code:"رمز الدخول",
+    gate_sub:"مؤسسة مسك · الاتصال الاستراتيجي. أدخل رمز دخول الفريق للمتابعة.",
+    gate_err:"رمز غير صحيح. حاول مجددًا.", enter_workspace:"دخول مساحة العمل",
+    cfg_banner:'<b>إعداد لمرة واحدة:</b> الصق <code>الرابط</code> و<code>مفتاح anon</code> الخاصين بـ Supabase في كتلة <code>SUPABASE_CONFIG</code> أعلى السكربت (أو عيّن متغيرات البيئة في ستاك Docker). حتى ذلك الحين يعمل بالوضع التجريبي ولا يُحفظ شيء.',
+    footer:'<b>مسك · رادار الأزمات</b> — مساحة عمل مشتركة للفريق. تُصنَّف النتائج تلقائيًا إلى منخفض / متوسط / مرتفع.',
+    live_connecting:"جارٍ الاتصال…", live_synced:"مباشر · متزامن", live_error:"خطأ في الاتصال", live_demo:"وضع تجريبي · غير متصل",
+    portfolio_avg:"متوسط المحفظة", score:"النتيجة", case:"حالة", cases:"حالات", dashed_line:"خط متقطع",
+    all:"الكل", team:"الفريق", loading:"جارٍ التحميل…", no_notes:"لا توجد ملاحظات رصد بعد.",
+    confirm_delete:"حذف هذه الحالة نهائيًا؟", could_not_save:"تعذّر الحفظ: ", could_not_delete:"تعذّر الحذف: ",
+    connect_supabase:"اربط Supabase لحفظ الملاحظات.", add_case_title:"إضافة حالة جديدة", edit_case_title:"تعديل الحالة",
+    cat:{ "Reputational":"السمعة", "Media & Public":"الإعلام والجمهور", "Social / Digital":"التواصل الاجتماعي / الرقمي", "Stakeholder":"أصحاب المصلحة", "Operational":"تشغيلي", "Governance":"الحوكمة" },
+    status:{ "Active":"نشطة", "Monitoring":"قيد الرصد", "Escalated":"مُصعّدة", "Resolved":"مُغلقة" },
+    dims:{
+      severity:{label:"الخطورة", q:"ما مدى خطورتها الآن؟", opts:["ضئيلة","منخفضة","متوسطة","عالية","شديدة"]},
+      urgency:{label:"الإلحاح", q:"ما مدى سرعة التحرك المطلوبة؟", opts:["يمكن الانتظار","منخفض","قريبًا","ملحّ","فوري"]},
+      reach:{label:"الانتشار", q:"كم عدد المهتمين أو المطّلعين؟", opts:["محدود جدًا","محدود","ملحوظ","واسع","انتشار واسع"]},
+      sentiment:{label:"المشاعر", q:"ما مدى سلبية المشاعر العامة؟", opts:["محايد","سلبي قليلًا","سلبي","سلبي جدًا","عدائي"]},
+      escalation_risk:{label:"خطر التصعيد", q:"ما احتمال تصاعدها؟", opts:["نادر","غير مرجّح","محتمل","مرجّح","شبه مؤكد"]},
+      strategic_impact:{label:"الأثر الاستراتيجي", q:"الأثر على سمعة مسك وأهدافها؟", opts:["لا يُذكر","طفيف","متوسط","كبير","حرج"]}
+    }
+  }
+};
+let LANG = localStorage.getItem("crg_lang") || "en";
+function t(k){ const d=I18N[LANG]||I18N.en; return (k in d) ? d[k] : (k in I18N.en ? I18N.en[k] : k); }
+function dLabel(d){ return LANG==="ar" ? I18N.ar.dims[d.key].label : d.label; }
+function dQ(d){ return LANG==="ar" ? I18N.ar.dims[d.key].q : d.q; }
+function dOpt(d,i){ return LANG==="ar" ? I18N.ar.dims[d.key].opts[i] : d.opts[i]; }
+function catLabel(v){ return LANG==="ar" ? (I18N.ar.cat[v]||v) : v; }
+function statusLabel(v){ return LANG==="ar" ? (I18N.ar.status[v]||v) : v; }
+function clsLabel(c){ return t("cls_"+c); }
+
+/* ---- state ---- */
+let CASES=[], activeStatus="All", activeCat="All", searchTerm="", selectedId=null, currentDetailId=null, liveKey="live_connecting";
+let configured = SUPABASE_CONFIG.url.startsWith("http") && SUPABASE_CONFIG.anonKey.length>20;
+let sb = configured ? supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey) : null;
+if(!configured) document.getElementById("cfgBanner").style.display="block";
+
+const DEMO=[{id:"demo1",title:"(Demo) Connect Supabase to save real cases",category:"Governance",summary:"Placeholder until your Supabase keys are added. Then the radar reads & writes from the shared team database.",status:"Monitoring",severity:2,urgency:2,reach:1,sentiment:2,escalation_risk:2,strategic_impact:2,expected_impact:"—",recommended_action:"Add Supabase keys, then re-enter your two real cases.",reference_links:"",created_at:new Date().toISOString(),updated_at:new Date().toISOString()}];
+
+/* ============================================================
+   SCORING
+   ============================================================ */
+function compositeScore(c){
+  let sum=0,w=0;
+  DIMENSIONS.forEach(d=>{const v=+c[d.key]||0; const wt=WEIGHTS[d.key]||1; sum+=v*wt; w+=wt;});
+  return w? sum/w : 0;                 // 1..5
+}
+function classify(score){ return score>=3.67?"High":score>=2.34?"Medium":"Low"; }
+function clsOf(c){ return classify(compositeScore(c)); }
+
+/* ============================================================
+   ACCESS GATE
+   ============================================================ */
+function initGate(){
+  if(!ACCESS_CODE || sessionStorage.getItem("crg_ok")==="1"){ start(); return; }
+  const g=document.getElementById("gate"); g.classList.add("open");
+  const submit=()=>{ if(document.getElementById("gateInput").value===ACCESS_CODE){sessionStorage.setItem("crg_ok","1");g.classList.remove("open");start();} else {document.getElementById("gateErr").style.display="block";} };
+  document.getElementById("gateBtn").onclick=submit;
+  document.getElementById("gateInput").addEventListener("keydown",e=>{if(e.key==="Enter")submit();});
+}
+
+/* ============================================================
+   DATA
+   ============================================================ */
+async function loadCases(){
+  if(!configured){ CASES=DEMO.slice(); render(); return; }
+  const {data,error}=await sb.from("crisis_cases").select("*").order("created_at",{ascending:false});
+  if(error){ setLive(false,"live_error"); console.error(error); return; }
+  CASES=data||[]; setLive(true,"live_synced"); render();
+}
+async function saveCase(){
+  const title=val("f_title").trim();
+  if(!title){ document.getElementById("e_title").style.display="block"; return; }
+  document.getElementById("e_title").style.display="none";
+  const rec={ title, category:val("f_category"), summary:val("f_summary").trim()||null, status:val("f_status"),
+    expected_impact:val("f_expected_impact").trim()||null, recommended_action:val("f_recommended_action").trim()||null,
+    reference_links:val("f_reference_links").trim()||null };
+  DIMENSIONS.forEach(d=> rec[d.key]=+val("f_"+d.key) );
+  const id=val("f_id");
+  if(!configured){
+    if(id){ Object.assign(CASES.find(x=>x.id===id),rec,{updated_at:new Date().toISOString()}); }
+    else { CASES.unshift({...rec,id:"demo"+Date.now(),created_at:new Date().toISOString(),updated_at:new Date().toISOString()}); }
+    closeForm(); render(); return;
+  }
+  const res = id ? await sb.from("crisis_cases").update(rec).eq("id",id) : await sb.from("crisis_cases").insert(rec);
+  if(res.error){ alert(t("could_not_save")+res.error.message); return; }
+  closeForm(); await loadCases();
+}
+async function deleteCase(id){
+  if(!confirm(t("confirm_delete"))) return;
+  if(!configured){ CASES=CASES.filter(c=>c.id!==id); closeDetail(); render(); return; }
+  const {error}=await sb.from("crisis_cases").delete().eq("id",id);
+  if(error){ alert(t("could_not_delete")+error.message); return; }
+  closeDetail(); await loadCases();
+}
+async function loadNotes(id){ if(!configured) return []; const {data}=await sb.from("case_updates").select("*").eq("case_id",id).order("created_at",{ascending:false}); return data||[]; }
+async function addNote(id){
+  const txt=document.getElementById("noteInput").value.trim(); if(!txt) return;
+  if(!configured){ alert(t("connect_supabase")); return; }
+  const {error}=await sb.from("case_updates").insert({case_id:id,note:txt}); if(error){ alert(error.message); return; }
+  document.getElementById("noteInput").value=""; openDetail(id);
+}
+function initRealtime(){
+  if(!configured) return;
+  sb.channel("crisis-radar")
+    .on("postgres_changes",{event:"*",schema:"public",table:"crisis_cases"},()=>loadCases())
+    .on("postgres_changes",{event:"*",schema:"public",table:"case_updates"},()=>{ if(currentDetailId) openDetail(currentDetailId); })
+    .subscribe(s=>{ if(s==="SUBSCRIBED") setLive(true,"live_synced"); });
+}
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+function render(){ renderStats(); renderRadar(); renderTable(); }
+function activeForAvg(){ const hr=document.getElementById("hideResolved").checked; return CASES.filter(c=>!(hr&&c.status==="Resolved")); }
+function visibleCases(){
+  return CASES.filter(c=>{
+    if(activeStatus!=="All"&&c.status!==activeStatus) return false;
+    if(activeCat!=="All"&&c.category!==activeCat) return false;
+    if(searchTerm){ const b=(c.title+" "+(c.summary||"")+" "+(c.recommended_action||"")).toLowerCase(); if(!b.includes(searchTerm)) return false; }
+    return true;
+  });
+}
+function renderStats(){
+  set("kTotal",CASES.length);
+  const h=CASES.filter(c=>clsOf(c)==="High").length, m=CASES.filter(c=>clsOf(c)==="Medium").length, l=CASES.filter(c=>clsOf(c)==="Low").length;
+  set("kHigh",h);set("kMed",m);set("kLow",l);set("kEsc",CASES.filter(c=>c.status==="Escalated").length);
+  set("cHigh",h);set("cMed",m);set("cLow",l);
+}
+
+/* ---- shared spider-radar drawing ---- */
+function radarPoints(cx,cy,R,obj){ return DIMENSIONS.map((d,i)=>{ const v=+obj[d.key]||0; const a=(-90+i*60)*Math.PI/180; const r=(v/5)*R; return [cx+Math.cos(a)*r, cy+Math.sin(a)*r]; }); }
+function poly(pts){ return pts.map(p=>p[0].toFixed(1)+","+p[1].toFixed(1)).join(" "); }
+function gridSvg(cx,cy,R,withLabels){
+  let s="";
+  for(let ring=1;ring<=5;ring++){ const pts=DIMENSIONS.map((d,i)=>{const a=(-90+i*60)*Math.PI/180;const r=(ring/5)*R;return [cx+Math.cos(a)*r,cy+Math.sin(a)*r];}); s+=`<polygon class="r-grid" points="${poly(pts)}"/>`; }
+  DIMENSIONS.forEach((d,i)=>{ const a=(-90+i*60)*Math.PI/180; s+=`<line class="r-spoke" x1="${cx}" y1="${cy}" x2="${(cx+Math.cos(a)*R).toFixed(1)}" y2="${(cy+Math.sin(a)*R).toFixed(1)}"/>`; });
+  for(let ring=1;ring<=5;ring++){ const y=cy-(ring/5)*R; s+=`<text class="r-tick" x="${cx+3}" y="${y-2}">${ring}</text>`; }
+  if(withLabels){ DIMENSIONS.forEach((d,i)=>{ const a=(-90+i*60)*Math.PI/180; const lx=cx+Math.cos(a)*(R+30), ly=cy+Math.sin(a)*(R+30); const anc=Math.cos(a)>.2?"start":Math.cos(a)<-.2?"end":"middle"; s+=`<text class="r-axis" x="${lx.toFixed(1)}" y="${(ly+3).toFixed(1)}" text-anchor="${anc}">${esc(dLabel(d))}</text>`; }); }
+  return s;
+}
+function renderRadar(){
+  const cx=260,cy=235,R=150,g=document.getElementById("radarG");
+  let s=gridSvg(cx,cy,R,true);
+  const avgCases=activeForAvg();
+  const avg={}; DIMENSIONS.forEach(d=>{ avg[d.key]= avgCases.length? avgCases.reduce((a,c)=>a+(+c[d.key]||0),0)/avgCases.length : 0; });
+  s+=`<polygon class="r-avg" points="${poly(radarPoints(cx,cy,R,avg))}"/>`;
+  const sel = selectedId? CASES.find(c=>c.id===selectedId):null;
+  if(sel){ const col=CLS_COLOR[clsOf(sel)]; const pts=radarPoints(cx,cy,R,sel);
+    s+=`<polygon class="r-sel" points="${poly(pts)}" fill="${col}" stroke="${col}"/>`;
+    pts.forEach(p=> s+=`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3.4" fill="${col}" stroke="#072c21" stroke-width="1"/>`);
+  }
+  g.innerHTML=s;
+  const cap=document.getElementById("radarCap");
+  if(sel){ cap.innerHTML=`${esc(sel.title)} &nbsp;·&nbsp; <span>${t("score")} ${compositeScore(sel).toFixed(1)}/5 · ${clsLabel(clsOf(sel))}</span>`; }
+  else { const n=avgCases.length; cap.innerHTML=`${t("portfolio_avg")} &nbsp;·&nbsp; <span>${n} ${t(n===1?"case":"cases")} · ${t("dashed_line")}</span>`; }
+}
+function renderTable(){
+  const rows=visibleCases(), tb=document.getElementById("tbody"); tb.innerHTML="";
+  document.getElementById("emptyState").style.display=rows.length?"none":"block";
+  rows.forEach(c=>{
+    const cls=clsOf(c), sc=compositeScore(c).toFixed(1);
+    const tr=document.createElement("tr"); if(c.id===selectedId) tr.className="sel";
+    tr.onclick=()=>openDetail(c.id);
+    tr.innerHTML=`<td><div class="t-title">${esc(c.title)}</div>${c.summary?`<div class="t-sub">${esc(c.summary).slice(0,72)}${c.summary.length>72?"…":""}</div>`:""}</td>
+      <td>${esc(catLabel(c.category))}</td>
+      <td><span class="cls-badge cb-${cls}"><span class="d" style="background:${CLS_COLOR[cls]}"></span>${clsLabel(cls)}</span></td>
+      <td style="font-weight:700">${sc}<span style="color:var(--muted);font-weight:500">/5</span></td>
+      <td><span class="st st-${c.status}">${esc(statusLabel(c.status))}</span></td>
+      <td>${fmtDate(c.updated_at)}</td>
+      <td onclick="event.stopPropagation()"><div class="rowact">
+        <button class="iconbtn" title="${esc(t("edit_case"))}" onclick="openForm('${c.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+        <button class="iconbtn del" title="${esc(t("delete"))}" onclick="deleteCase('${c.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg></button>
+      </div></td>`;
+    tb.appendChild(tr);
+  });
+}
+
+/* ============================================================
+   FORM
+   ============================================================ */
+function rebuildDimFields(){
+  const wrap=document.getElementById("dimFields");
+  const vals={}; DIMENSIONS.forEach(d=>{ const e=document.getElementById("f_"+d.key); vals[d.key]= e? e.value : 3; });
+  wrap.innerHTML=""; wrap.dataset.built="1";
+  DIMENSIONS.forEach(d=>{
+    const opts=d.opts.map((o,i)=>`<option value="${i+1}">${i+1} · ${esc(dOpt(d,i))}</option>`).join("");
+    const div=document.createElement("div"); div.className="field";
+    div.innerHTML=`<label><span>${esc(dLabel(d))}</span><span class="hint">${esc(dQ(d))}</span></label><select id="f_${d.key}" class="dimsel">${opts}</select>`;
+    wrap.appendChild(div);
+  });
+  wrap.querySelectorAll(".dimsel").forEach(s=>{ s.value=vals[s.id.slice(2)]; s.addEventListener("change",updatePreview); });
+  updatePreview();
+}
+function fillFormSelects(){
+  const cat=document.getElementById("f_category"); const cv=cat.value;
+  cat.innerHTML=""; CATEGORIES.forEach(c=>cat.add(new Option(catLabel(c),c))); if(cv) cat.value=cv;
+  const st=document.getElementById("f_status"); const sv=st.value;
+  st.innerHTML=""; STATUSES.forEach(s=>st.add(new Option(statusLabel(s),s))); st.value=sv||STATUSES[0];
+}
+function updatePreview(){
+  const tmp={}; DIMENSIONS.forEach(d=> tmp[d.key]=+val("f_"+d.key) );
+  const sc=compositeScore(tmp), cls=classify(sc);
+  set("pvScore",sc.toFixed(1));
+  const el=document.getElementById("pvCls"); el.className="cls-badge cb-"+cls; el.innerHTML=`<span class="d" style="background:${CLS_COLOR[cls]}"></span>${clsLabel(cls)}`;
+}
+function openForm(id){
+  rebuildDimFields();
+  fillFormSelects();
+  document.getElementById("e_title").style.display="none";
+  if(id){
+    const c=CASES.find(x=>x.id===id); if(!c) return;
+    document.getElementById("formTitle").textContent=t("edit_case_title");
+    set2("f_id",id);set2("f_title",c.title);set2("f_category",c.category);set2("f_status",c.status);
+    set2("f_summary",c.summary||"");set2("f_expected_impact",c.expected_impact||"");set2("f_recommended_action",c.recommended_action||"");set2("f_reference_links",c.reference_links||"");
+    DIMENSIONS.forEach(d=> set2("f_"+d.key, c[d.key]||3) );
+  } else {
+    document.getElementById("formTitle").textContent=t("add_case_title");
+    ["f_id","f_title","f_summary","f_expected_impact","f_recommended_action","f_reference_links"].forEach(i=>set2(i,""));
+    set2("f_category",CATEGORIES[0]);set2("f_status","Active");
+    DIMENSIONS.forEach(d=> set2("f_"+d.key,3) );
+  }
+  updatePreview();
+  document.getElementById("formOverlay").classList.add("open");
+  setTimeout(()=>document.getElementById("f_title").focus(),60);
+}
+function closeForm(){ document.getElementById("formOverlay").classList.remove("open"); }
+
+/* ============================================================
+   DETAIL DRAWER
+   ============================================================ */
+async function openDetail(id){
+  const c=CASES.find(x=>x.id===id); if(!c) return;
+  currentDetailId=id; selectedId=id; renderRadar(); renderTable();
+  const cls=clsOf(c), sc=compositeScore(c).toFixed(1);
+  document.getElementById("d_title").textContent=c.title;
+  document.getElementById("d_badges").innerHTML=
+    `<span class="cls-badge cb-${cls}"><span class="d" style="background:${CLS_COLOR[cls]}"></span>${clsLabel(cls)} · ${sc}/5</span>
+     <span class="st st-${c.status}">${esc(statusLabel(c.status))}</span>
+     <span style="font-size:12.5px;color:var(--muted);font-weight:600">${esc(catLabel(c.category))}</span>`;
+  // mini radar
+  const cx=260,cy=225,R=140; let s=gridSvg(cx,cy,R,true);
+  const pts=radarPoints(cx,cy,R,c); s+=`<polygon points="${poly(pts)}" fill="${CLS_COLOR[cls]}" fill-opacity=".24" stroke="${CLS_COLOR[cls]}" stroke-width="2.2"/>`;
+  pts.forEach(p=> s+=`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3.4" fill="${CLS_COLOR[cls]}" stroke="#072c21" stroke-width="1"/>`);
+  document.getElementById("d_radar").innerHTML=s;
+  // bars
+  document.getElementById("d_bars").innerHTML=DIMENSIONS.map(d=>{ const v=+c[d.key]||0; const lab=dOpt(d,v-1)||"—"; const col=v>=4?"var(--high)":v>=3?"var(--med)":"var(--low)";
+    return `<div class="bar"><span class="bl">${esc(dLabel(d))}</span><span class="bt"><span class="bf" style="width:${v/5*100}%;background:${col}"></span></span><span class="bv">${v}<span style="color:var(--muted);font-weight:500;font-size:11px"> ${esc(lab)}</span></span></div>`;
+  }).join("");
+  document.getElementById("d_summary").textContent=c.summary||"—";
+  document.getElementById("d_expected").textContent=c.expected_impact||"—";
+  document.getElementById("d_action").textContent=c.recommended_action||"—";
+  document.getElementById("d_refs").innerHTML=linkify(c.reference_links);
+  document.getElementById("d_edit").onclick=()=>{closeDetail();openForm(id);};
+  document.getElementById("d_delete").onclick=()=>deleteCase(id);
+  document.getElementById("noteBtn").onclick=()=>addNote(id);
+  const ne=document.getElementById("d_notes"); ne.innerHTML=`<div style="color:var(--muted);font-size:13px">${esc(t("loading"))}</div>`;
+  document.getElementById("detailOverlay").classList.add("open");
+  const notes=await loadNotes(id);
+  ne.innerHTML = notes.length ? notes.map(n=>`<div class="note"><div class="nm"><span>${esc(n.author||t("team"))}</span><span>${fmtDateTime(n.created_at)}</span></div><div class="nt">${esc(n.note)}</div></div>`).join("") : `<div style="color:var(--muted);font-size:13px">${esc(t("no_notes"))}</div>`;
+}
+function closeDetail(){ document.getElementById("detailOverlay").classList.remove("open"); currentDetailId=null; }
+
+/* ============================================================
+   FILTERS / SEARCH / EXPORT
+   ============================================================ */
+function buildFilters(){
+  const sf=document.getElementById("statusFilters"); sf.innerHTML="";
+  ["All",...STATUSES].forEach(x=>{ const b=document.createElement("button"); b.className="chip"+(x===activeStatus?" on":""); b.textContent=x==="All"?t("all"):statusLabel(x); b.onclick=()=>{activeStatus=x;[...sf.children].forEach(n=>n.classList.remove("on"));b.classList.add("on");render();}; sf.appendChild(b); });
+  const cf=document.getElementById("catFilters"); cf.innerHTML="";
+  ["All",...CATEGORIES].forEach(x=>{ const b=document.createElement("button"); b.className="chip"+(x===activeCat?" on":""); b.textContent=x==="All"?t("all"):catLabel(x); b.onclick=()=>{activeCat=x;[...cf.children].forEach(n=>n.classList.remove("on"));b.classList.add("on");render();}; cf.appendChild(b); });
+  document.getElementById("dimLegend").innerHTML=DIMENSIONS.map(d=>`<div class="di"><b>${esc(dLabel(d))}</b> — ${esc(dQ(d))}</div>`).join("");
+}
+function exportCSV(){
+  const cols=["title","category","summary","status",...DIMENSIONS.map(d=>d.key),"composite_score","classification","expected_impact","recommended_action","reference_links","created_at"];
+  const head=cols.join(",");
+  const body=CASES.map(c=>{ const row={...c,composite_score:compositeScore(c).toFixed(2),classification:clsOf(c)}; return cols.map(k=>`"${String(row[k]??"").replace(/"/g,'""')}"`).join(","); }).join("\n");
+  const blob=new Blob([head+"\n"+body],{type:"text/csv"}); const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob); a.download="misk-crisis-radar-"+new Date().toISOString().slice(0,10)+".csv"; a.click();
+}
+
+/* ============================================================
+   I18N APPLY
+   ============================================================ */
+function applyLang(){
+  document.documentElement.lang = LANG;
+  document.documentElement.dir = LANG==="ar" ? "rtl" : "ltr";
+  localStorage.setItem("crg_lang",LANG);
+  document.querySelectorAll("[data-i18n]").forEach(el=>{ el.textContent = t(el.getAttribute("data-i18n")); });
+  document.querySelectorAll("[data-i18n-html]").forEach(el=>{ el.innerHTML = t(el.getAttribute("data-i18n-html")); });
+  document.querySelectorAll("[data-i18n-ph]").forEach(el=>{ el.setAttribute("placeholder", t(el.getAttribute("data-i18n-ph"))); });
+  document.getElementById("langBtn").textContent = LANG==="ar" ? "EN" : "العربية";
+  setLive(!document.getElementById("liveBadge").classList.contains("off"), liveKey);
+  buildFilters();
+  if(document.getElementById("dimFields").dataset.built){ rebuildDimFields(); fillFormSelects(); }
+  render();
+  if(currentDetailId) openDetail(currentDetailId);
+}
+
+/* ============================================================
+   UTILITIES
+   ============================================================ */
+function val(id){return document.getElementById(id).value;}
+function set(id,v){document.getElementById(id).textContent=v;}
+function set2(id,v){const e=document.getElementById(id); if(e) e.value=v;}
+function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));}
+function linkify(t){ if(!t||!t.trim()) return "—"; return t.split(/(\s+)/).map(p=>/^https?:\/\//i.test(p)?`<a href="${esc(p)}" target="_blank" rel="noopener">${esc(p)}</a>`:esc(p)).join(""); }
+function fmtDate(d){if(!d)return"—";return new Date(d).toLocaleDateString(LANG==="ar"?"ar-SA-u-nu-latn":"en-GB",{day:"2-digit",month:"short",year:"numeric"});}
+function fmtDateTime(d){if(!d)return"—";const x=new Date(d);const loc=LANG==="ar"?"ar-SA-u-nu-latn":"en-GB";return x.toLocaleDateString(loc,{day:"2-digit",month:"short"})+" · "+x.toLocaleTimeString(loc,{hour:"2-digit",minute:"2-digit"});}
+function setLive(on,key){liveKey=key;const b=document.getElementById("liveBadge");b.classList.toggle("off",!on);document.getElementById("liveText").textContent=t(key);}
+
+/* ============================================================
+   BOOT
+   ============================================================ */
+document.getElementById("addBtn").onclick=()=>openForm();
+document.getElementById("refreshBtn").onclick=loadCases;
+document.getElementById("saveBtn").onclick=saveCase;
+document.getElementById("exportBtn").onclick=exportCSV;
+document.getElementById("portfolioBtn").onclick=()=>{selectedId=null;renderRadar();renderTable();};
+document.getElementById("hideResolved").onchange=()=>{renderRadar();};
+document.getElementById("searchInput").addEventListener("input",e=>{searchTerm=e.target.value.toLowerCase();renderTable();});
+document.getElementById("langBtn").onclick=()=>{ LANG = LANG==="ar"?"en":"ar"; applyLang(); };
+[document.getElementById("formOverlay"),document.getElementById("detailOverlay")].forEach(o=>o.addEventListener("click",e=>{if(e.target===o)o.classList.remove("open");}));
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeForm();closeDetail();}});
+function start(){ buildFilters(); loadCases(); initRealtime(); if(!configured) setLive(false,"live_demo"); }
+applyLang();
+initGate();
+</script>
+</body>
+</html>
