@@ -1,14 +1,66 @@
 services:
-  crisis-radar:
-    # Image is built automatically by GitHub Actions and pushed to GHCR.
-    # For a local build instead, comment this out and use:  build: .
-    image: ghcr.io/twuijri/misk-crisis-radar:latest
-    container_name: misk-crisis-radar
+  # ---------------------------------------------------------------
+  # PostgreSQL — the "brain". Internal only, never exposed to the
+  # internet. Data lives in the named volume below.
+  # ---------------------------------------------------------------
+  db:
+    image: postgres:16-alpine
+    container_name: misk-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-misk}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?set a strong POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB:-misk}
+    volumes:
+      - misk_db:/var/lib/postgresql/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-misk} -d ${POSTGRES_DB:-misk}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ---------------------------------------------------------------
+  # API — Node/Express. Talks to db on the internal network, and is
+  # exposed on the same domain under /api via Traefik.
+  # ---------------------------------------------------------------
+  api:
+    image: ghcr.io/twuijri/misk-crisis-radar-api:latest
+    container_name: misk-api
     restart: unless-stopped
     pull_policy: always
+    depends_on:
+      db:
+        condition: service_healthy
     environment:
-      - SUPABASE_URL=${SUPABASE_URL}
-      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - DATABASE_URL=postgres://${POSTGRES_USER:-misk}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-misk}
+      - API_TOKEN=${API_TOKEN:-}
+    networks:
+      - internal
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.misk-api.rule=Host(`misk.i3u.us`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.misk-api.entrypoints=web"
+      - "traefik.http.routers.misk-api.priority=20"
+      - "traefik.http.services.misk-api.loadbalancer.server.port=3000"
+      - "traefik.docker.network=proxy"
+
+  # ---------------------------------------------------------------
+  # Web — static bilingual dashboard served by nginx. Calls the API
+  # same-origin at /api, so there is no CORS to configure.
+  # ---------------------------------------------------------------
+  web:
+    image: ghcr.io/twuijri/misk-crisis-radar-web:latest
+    container_name: misk-web
+    restart: unless-stopped
+    pull_policy: always
+    depends_on:
+      - api
+    environment:
+      - API_BASE=/api
+      - API_TOKEN=${API_TOKEN:-}
       - ACCESS_CODE=${ACCESS_CODE:-}
     networks:
       - proxy
@@ -16,10 +68,17 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.misk.rule=Host(`misk.i3u.us`)"
       - "traefik.http.routers.misk.entrypoints=web"
+      - "traefik.http.routers.misk.priority=10"
       - "traefik.http.services.misk.loadbalancer.server.port=80"
       - "traefik.docker.network=proxy"
+
+volumes:
+  misk_db:
 
 networks:
   # Must match the external network your Traefik container is on.
   proxy:
     external: true
+  # Private network for db <-> api. Not reachable from outside.
+  internal:
+    internal: true

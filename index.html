@@ -4,7 +4,6 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Misk · Crisis Radar</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet" />
@@ -293,18 +292,16 @@ footer.foot{text-align:center;color:var(--muted);font-size:12px;margin-top:38px}
 
 <script>
 /* ============================================================
-   SUPABASE CONFIG
-   In the Docker stack these placeholders are replaced at
-   container start from the SUPABASE_URL / SUPABASE_ANON_KEY /
-   ACCESS_CODE environment variables (see docker-entrypoint.sh).
-   You can also hard-code them here for a plain static deploy.
+   BACKEND CONFIG
+   The page talks to its own self-hosted API (the "api" service),
+   reached on the same domain under /api. In the Docker stack
+   these placeholders are replaced at container start from the
+   API_BASE / API_TOKEN / ACCESS_CODE environment variables
+   (see docker-entrypoint.sh).
    ============================================================ */
-const SUPABASE_CONFIG = {
-  url: "__SUPABASE_URL__",
-  anonKey: "__SUPABASE_ANON_KEY__"
-};
-let ACCESS_CODE = "__ACCESS_CODE__";                 // shared code; "" = no gate
-if (ACCESS_CODE.indexOf("__") === 0) ACCESS_CODE = "";   // unsubstituted placeholder → no gate
+const API_BASE = "__API_BASE__".indexOf("__") === 0 ? "/api" : "__API_BASE__";
+let API_TOKEN  = "__API_TOKEN__";   if (API_TOKEN.indexOf("__") === 0)  API_TOKEN  = "";
+let ACCESS_CODE = "__ACCESS_CODE__"; if (ACCESS_CODE.indexOf("__") === 0) ACCESS_CODE = "";
 
 const CATEGORIES = ["Reputational","Media & Public","Social / Digital","Stakeholder","Operational","Governance"];
 const STATUSES   = ["Active","Monitoring","Escalated","Resolved"];
@@ -350,13 +347,13 @@ const I18N = {
     search_ph:"Search cases, summaries…", add_update_ph:"Add a monitoring update…", access_code:"Access code",
     gate_sub:"Misk Foundation · Strategic Communication. Enter the team access code to continue.",
     gate_err:"Incorrect code. Try again.", enter_workspace:"Enter workspace",
-    cfg_banner:'<b>One-time setup:</b> paste your Supabase <code>URL</code> and <code>anon key</code> into the <code>SUPABASE_CONFIG</code> block near the top of the script (or set the env vars in the Docker stack). Until then it runs in demo mode and nothing is saved.',
+    cfg_banner:'<b>Backend not reachable</b> — the page is running in demo mode and nothing is saved. Check that the <code>api</code> service is running and reachable at <code>/api</code>.',
     footer:'<b>Misk · Crisis Radar</b> — shared team workspace. Scores roll up to a Low / Medium / High classification automatically.',
     live_connecting:"Connecting…", live_synced:"Live · synced", live_error:"Connection error", live_demo:"Demo mode · not connected",
     portfolio_avg:"Portfolio average", score:"score", case:"case", cases:"cases", dashed_line:"dashed line",
     all:"All", team:"Team", loading:"Loading…", no_notes:"No monitoring notes yet.",
     confirm_delete:"Delete this case permanently?", could_not_save:"Could not save: ", could_not_delete:"Could not delete: ",
-    connect_supabase:"Connect Supabase to save notes.", add_case_title:"Add New Case", edit_case_title:"Edit Case"
+    connect_backend:"Connect the backend to save notes.", add_case_title:"Add New Case", edit_case_title:"Edit Case"
   },
   ar: {
     app_title:"رادار الأزمات", app_subtitle:"رصد حي للانطباع والمخاطر · الاتصال الاستراتيجي", org_name:"مؤسسة مسك",
@@ -382,13 +379,13 @@ const I18N = {
     search_ph:"ابحث في الحالات والملخصات…", add_update_ph:"أضف تحديث رصد…", access_code:"رمز الدخول",
     gate_sub:"مؤسسة مسك · الاتصال الاستراتيجي. أدخل رمز دخول الفريق للمتابعة.",
     gate_err:"رمز غير صحيح. حاول مجددًا.", enter_workspace:"دخول مساحة العمل",
-    cfg_banner:'<b>إعداد لمرة واحدة:</b> الصق <code>الرابط</code> و<code>مفتاح anon</code> الخاصين بـ Supabase في كتلة <code>SUPABASE_CONFIG</code> أعلى السكربت (أو عيّن متغيرات البيئة في ستاك Docker). حتى ذلك الحين يعمل بالوضع التجريبي ولا يُحفظ شيء.',
+    cfg_banner:'<b>تعذّر الوصول للخادم</b> — الصفحة تعمل بالوضع التجريبي ولا يُحفظ شيء. تأكد أن خدمة <code>api</code> تعمل وقابلة للوصول على <code>/api</code>.',
     footer:'<b>مسك · رادار الأزمات</b> — مساحة عمل مشتركة للفريق. تُصنَّف النتائج تلقائيًا إلى منخفض / متوسط / مرتفع.',
     live_connecting:"جارٍ الاتصال…", live_synced:"مباشر · متزامن", live_error:"خطأ في الاتصال", live_demo:"وضع تجريبي · غير متصل",
     portfolio_avg:"متوسط المحفظة", score:"النتيجة", case:"حالة", cases:"حالات", dashed_line:"خط متقطع",
     all:"الكل", team:"الفريق", loading:"جارٍ التحميل…", no_notes:"لا توجد ملاحظات رصد بعد.",
     confirm_delete:"حذف هذه الحالة نهائيًا؟", could_not_save:"تعذّر الحفظ: ", could_not_delete:"تعذّر الحذف: ",
-    connect_supabase:"اربط Supabase لحفظ الملاحظات.", add_case_title:"إضافة حالة جديدة", edit_case_title:"تعديل الحالة",
+    connect_backend:"اربط الخادم لحفظ الملاحظات.", add_case_title:"إضافة حالة جديدة", edit_case_title:"تعديل الحالة",
     cat:{ "Reputational":"السمعة", "Media & Public":"الإعلام والجمهور", "Social / Digital":"التواصل الاجتماعي / الرقمي", "Stakeholder":"أصحاب المصلحة", "Operational":"تشغيلي", "Governance":"الحوكمة" },
     status:{ "Active":"نشطة", "Monitoring":"قيد الرصد", "Escalated":"مُصعّدة", "Resolved":"مُغلقة" },
     dims:{
@@ -412,9 +409,10 @@ function clsLabel(c){ return t("cls_"+c); }
 
 /* ---- state ---- */
 let CASES=[], activeStatus="All", activeCat="All", searchTerm="", selectedId=null, currentDetailId=null, liveKey="live_connecting";
-let configured = SUPABASE_CONFIG.url.startsWith("http") && SUPABASE_CONFIG.anonKey.length>20;
-let sb = configured ? supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey) : null;
-if(!configured) document.getElementById("cfgBanner").style.display="block";
+let configured = true;   // set to false if the API can't be reached → demo mode
+let pollTimer = null;
+function apiHeaders(){ const h={"Content-Type":"application/json"}; if(API_TOKEN) h["Authorization"]="Bearer "+API_TOKEN; return h; }
+async function api(path, opts){ opts=opts||{}; const r=await fetch(API_BASE+path,{headers:apiHeaders(),...opts}); if(!r.ok){ let m="HTTP "+r.status; try{const j=await r.json(); if(j&&j.error) m=j.error;}catch(e){} throw new Error(m); } return r.status===204?null:r.json(); }
 
 const DEMO=[{id:"demo1",title:"(Demo) Connect Supabase to save real cases",category:"Governance",summary:"Placeholder until your Supabase keys are added. Then the radar reads & writes from the shared team database.",status:"Monitoring",severity:2,urgency:2,reach:1,sentiment:2,escalation_risk:2,strategic_impact:2,expected_impact:"—",recommended_action:"Add Supabase keys, then re-enter your two real cases.",reference_links:"",created_at:new Date().toISOString(),updated_at:new Date().toISOString()}];
 
@@ -444,10 +442,17 @@ function initGate(){
    DATA
    ============================================================ */
 async function loadCases(){
-  if(!configured){ CASES=DEMO.slice(); render(); return; }
-  const {data,error}=await sb.from("crisis_cases").select("*").order("created_at",{ascending:false});
-  if(error){ setLive(false,"live_error"); console.error(error); return; }
-  CASES=data||[]; setLive(true,"live_synced"); render();
+  try{
+    CASES = await api("/cases");
+    configured = true;
+    document.getElementById("cfgBanner").style.display="none";
+    setLive(true,"live_synced"); render();
+  }catch(e){
+    configured = false;
+    CASES = DEMO.slice();
+    document.getElementById("cfgBanner").style.display="block";
+    setLive(false,"live_demo"); render();
+  }
 }
 async function saveCase(){
   const title=val("f_title").trim();
@@ -463,30 +468,39 @@ async function saveCase(){
     else { CASES.unshift({...rec,id:"demo"+Date.now(),created_at:new Date().toISOString(),updated_at:new Date().toISOString()}); }
     closeForm(); render(); return;
   }
-  const res = id ? await sb.from("crisis_cases").update(rec).eq("id",id) : await sb.from("crisis_cases").insert(rec);
-  if(res.error){ alert(t("could_not_save")+res.error.message); return; }
+  try{
+    if(id) await api("/cases/"+id,{method:"PATCH",body:JSON.stringify(rec)});
+    else   await api("/cases",{method:"POST",body:JSON.stringify(rec)});
+  }catch(e){ alert(t("could_not_save")+e.message); return; }
   closeForm(); await loadCases();
 }
 async function deleteCase(id){
   if(!confirm(t("confirm_delete"))) return;
   if(!configured){ CASES=CASES.filter(c=>c.id!==id); closeDetail(); render(); return; }
-  const {error}=await sb.from("crisis_cases").delete().eq("id",id);
-  if(error){ alert(t("could_not_delete")+error.message); return; }
+  try{ await api("/cases/"+id,{method:"DELETE"}); }catch(e){ alert(t("could_not_delete")+e.message); return; }
   closeDetail(); await loadCases();
 }
-async function loadNotes(id){ if(!configured) return []; const {data}=await sb.from("case_updates").select("*").eq("case_id",id).order("created_at",{ascending:false}); return data||[]; }
+async function loadNotes(id){ if(!configured) return []; try{ return await api("/cases/"+id+"/notes"); }catch(e){ return []; } }
 async function addNote(id){
   const txt=document.getElementById("noteInput").value.trim(); if(!txt) return;
-  if(!configured){ alert(t("connect_supabase")); return; }
-  const {error}=await sb.from("case_updates").insert({case_id:id,note:txt}); if(error){ alert(error.message); return; }
+  if(!configured){ alert(t("connect_backend")); return; }
+  try{ await api("/cases/"+id+"/notes",{method:"POST",body:JSON.stringify({note:txt})}); }catch(e){ alert(e.message); return; }
   document.getElementById("noteInput").value=""; openDetail(id);
 }
+/* No websockets — near-real-time via a light poll every few seconds. */
 function initRealtime(){
-  if(!configured) return;
-  sb.channel("crisis-radar")
-    .on("postgres_changes",{event:"*",schema:"public",table:"crisis_cases"},()=>loadCases())
-    .on("postgres_changes",{event:"*",schema:"public",table:"case_updates"},()=>{ if(currentDetailId) openDetail(currentDetailId); })
-    .subscribe(s=>{ if(s==="SUBSCRIBED") setLive(true,"live_synced"); });
+  if(pollTimer) clearInterval(pollTimer);
+  pollTimer=setInterval(()=>{
+    if(!configured) return;
+    if(document.getElementById("formOverlay").classList.contains("open")) return; // don't disturb editing
+    loadCases();
+    if(currentDetailId) refreshNotes(currentDetailId);
+  },4000);
+}
+async function refreshNotes(id){
+  const ne=document.getElementById("d_notes"); if(!ne) return;
+  const notes=await loadNotes(id);
+  ne.innerHTML = notes.length ? notes.map(n=>`<div class="note"><div class="nm"><span>${esc(n.author||t("team"))}</span><span>${fmtDateTime(n.created_at)}</span></div><div class="nt">${esc(n.note)}</div></div>`).join("") : `<div style="color:var(--muted);font-size:13px">${esc(t("no_notes"))}</div>`;
 }
 
 /* ============================================================
