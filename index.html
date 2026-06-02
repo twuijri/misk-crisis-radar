@@ -319,7 +319,6 @@ body:not(.can-edit) .edit-only{display:none!important}
       </div>
       <div class="filter-block">
         <div><span class="filter-label" data-i18n="filter_status">التصفية حسب الوضع</span><div class="filters" id="statusFilters"></div></div>
-        <div><span class="filter-label" data-i18n="filter_category">التصفية حسب الفئة</span><div class="filters" id="catFilters"></div></div>
       </div>
       <div class="issues-container" id="allIssues"></div>
     </section>
@@ -359,10 +358,7 @@ body:not(.can-edit) .edit-only{display:none!important}
     <div class="modal-header"><span id="formTitle" data-i18n="add_case_title">إضافة قضية جديدة</span><button class="close-btn" type="button" onclick="closeForm()">&times;</button></div>
     <input type="hidden" id="f_id" />
     <div class="form-group"><label><span data-i18n="f_title_label">العنوان</span> <span class="req">*</span> <span class="label-hint" data-i18n="f_title_hint">ما هي المشكلة؟</span></label><input id="f_title" data-i18n-ph="f_title_ph" placeholder="ما هي المشكلة؟" /><div class="err" id="e_title" data-i18n="err_title">العنوان مطلوب.</div></div>
-    <div class="form-row">
-      <div class="form-group"><label><span data-i18n="f_category_label">الفئة</span> <span class="req">*</span></label><select id="f_category"></select></div>
-      <div class="form-group"><label data-i18n="f_status_label">الوضع</label><select id="f_status"></select></div>
-    </div>
+    <div class="form-group"><label data-i18n="f_status_label">الوضع</label><select id="f_status"></select></div>
     <div class="form-group"><label><span data-i18n="f_summary_label">الملخص</span> <span class="label-hint" data-i18n="f_summary_hint">وصف موجز</span></label><textarea id="f_summary" data-i18n-ph="f_summary_ph" placeholder="وصف موجز"></textarea></div>
     <div class="sectionlbl" data-i18n="risk_scoring">تقييم المخاطر — كل بُعد من 1 (منخفض) إلى 5 (مرتفع)</div>
     <div id="dimFields"></div>
@@ -567,7 +563,7 @@ async function saveCase(){
   const title=val("f_title").trim();
   if(!title){ document.getElementById("e_title").style.display="block"; return; }
   document.getElementById("e_title").style.display="none";
-  const rec={ title, category:val("f_category"), summary:val("f_summary").trim()||null, status:val("f_status"),
+  const rec={ title, summary:val("f_summary").trim()||null, status:val("f_status"),
     expected_impact:val("f_expected_impact").trim()||null, recommended_action:val("f_recommended_action").trim()||null,
     reference_links:val("f_reference_links").trim()||null };
   DIMENSIONS.forEach(d=> rec[d.key]=+val("f_"+d.key) );
@@ -632,7 +628,6 @@ function activeForAvg(){ const hr=document.getElementById("hideResolved").checke
 function visibleCases(){
   return CASES.filter(c=>{
     if(activeStatus!=="All"&&c.status!==activeStatus) return false;
-    if(activeCat!=="All"&&c.category!==activeCat) return false;
     if(searchTerm){ const b=(c.title+" "+(c.summary||"")+" "+(c.recommended_action||"")).toLowerCase(); if(!b.includes(searchTerm)) return false; }
     return true;
   });
@@ -649,7 +644,7 @@ function cardHTML(c){
   const sum=c.summary?esc(c.summary).slice(0,160)+(c.summary.length>160?"…":""):"";
   return `<div class="issue-card ${v}" data-id="${esc(c.id)}" onclick="openDetail('${esc(c.id)}')">
     <div class="issue-header"><div class="issue-title">${esc(c.title)}</div><span class="badge ${v}"><span class="bd"></span>${clsLabel(cls)} · ${sc}/5</span></div>
-    <div class="issue-meta-row"><span class="st st-${c.status}">${esc(statusLabel(c.status))}</span><span class="cat-tag">${esc(catLabel(c.category))}</span></div>
+    <div class="issue-meta-row"><span class="st st-${c.status}">${esc(statusLabel(c.status))}</span></div>
     ${sum?`<div class="issue-summary">${sum}</div>`:""}
     <div class="metrics-row">${metrics}</div>
     <div class="action-buttons">
@@ -717,7 +712,6 @@ async function openDetail(id){
       <div class="detail-meta">
         <div class="meta-item"><div class="meta-label">${esc(t("created_label"))}</div><div class="meta-value">${fmtDate(c.created_at)}</div></div>
         <div class="meta-item"><div class="meta-label">${esc(t("status_word"))}</div><div class="meta-value"><span class="st st-${c.status}">${esc(statusLabel(c.status))}</span></div></div>
-        <div class="meta-item"><div class="meta-label">${esc(t("category_word"))}</div><div class="meta-value">${esc(catLabel(c.category))}</div></div>
         <div class="meta-item"><div class="meta-label">${esc(t("classification_word"))}</div><div class="meta-value" style="color:${col}">${clsLabel(cls)}</div></div>
       </div>
     </div>
@@ -761,8 +755,6 @@ function rebuildDimFields(){
   updatePreview();
 }
 function fillFormSelects(){
-  const cat=document.getElementById("f_category"); const cv=cat.value;
-  cat.innerHTML=""; CATEGORIES.forEach(c=>cat.add(new Option(catLabel(c),c))); if(cv) cat.value=cv;
   const st=document.getElementById("f_status"); const sv=st.value;
   st.innerHTML=""; STATUSES.forEach(s=>st.add(new Option(statusLabel(s),s))); st.value=sv||STATUSES[0];
 }
@@ -778,13 +770,13 @@ function openForm(id){
   if(id){
     const c=CASES.find(x=>x.id===id); if(!c) return;
     document.getElementById("formTitle").textContent=t("edit_case_title");
-    set2("f_id",id);set2("f_title",c.title);set2("f_category",c.category);set2("f_status",c.status);
+    set2("f_id",id);set2("f_title",c.title);set2("f_status",c.status);
     set2("f_summary",c.summary||"");set2("f_expected_impact",c.expected_impact||"");set2("f_recommended_action",c.recommended_action||"");set2("f_reference_links",c.reference_links||"");
     DIMENSIONS.forEach(d=>{ const x=c[d.key]||3; set2("f_"+d.key,x); const sv=document.getElementById("sv_"+d.key); if(sv) sv.textContent=x; const so=document.getElementById("so_"+d.key); if(so) so.textContent=dOpt(d,(x-1)); });
   } else {
     document.getElementById("formTitle").textContent=t("add_case_title");
     ["f_id","f_title","f_summary","f_expected_impact","f_recommended_action","f_reference_links"].forEach(i=>set2(i,""));
-    set2("f_category",CATEGORIES[0]);set2("f_status","Active");
+    set2("f_status","Active");
     DIMENSIONS.forEach(d=>{ set2("f_"+d.key,3); const sv=document.getElementById("sv_"+d.key); if(sv) sv.textContent=3; const so=document.getElementById("so_"+d.key); if(so) so.textContent=dOpt(d,2); });
   }
   updatePreview();
@@ -797,12 +789,10 @@ function closeForm(){ document.getElementById("issueModal").classList.remove("ac
 function buildFilters(){
   const sf=document.getElementById("statusFilters"); sf.innerHTML="";
   ["All",...STATUSES].forEach(x=>{ const b=document.createElement("button"); b.className="chip"+(x===activeStatus?" on":""); b.textContent=x==="All"?t("all"):statusLabel(x); b.onclick=()=>{activeStatus=x;[...sf.children].forEach(n=>n.classList.remove("on"));b.classList.add("on");renderLists();}; sf.appendChild(b); });
-  const cf=document.getElementById("catFilters"); cf.innerHTML="";
-  ["All",...CATEGORIES].forEach(x=>{ const b=document.createElement("button"); b.className="chip"+(x===activeCat?" on":""); b.textContent=x==="All"?t("all"):catLabel(x); b.onclick=()=>{activeCat=x;[...cf.children].forEach(n=>n.classList.remove("on"));b.classList.add("on");renderLists();}; cf.appendChild(b); });
   document.getElementById("dimLegend").innerHTML=DIMENSIONS.map(d=>`<div class="di"><b>${esc(dLabel(d))}</b> — ${esc(dQ(d))}</div>`).join("");
 }
 function exportCSV(){
-  const cols=["title","category","summary","status",...DIMENSIONS.map(d=>d.key),"composite_score","classification","expected_impact","recommended_action","reference_links","created_at"];
+  const cols=["title","summary","status",...DIMENSIONS.map(d=>d.key),"composite_score","classification","expected_impact","recommended_action","reference_links","created_at"];
   const head=cols.join(",");
   const body=CASES.map(c=>{ const row={...c,composite_score:compositeScore(c).toFixed(2),classification:clsOf(c)}; return cols.map(k=>`"${String(row[k]??"").replace(/"/g,'""')}"`).join(","); }).join("\n");
   const blob=new Blob([head+"\n"+body],{type:"text/csv"}); const a=document.createElement("a");
