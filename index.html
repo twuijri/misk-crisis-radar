@@ -229,6 +229,13 @@ input[type="range"]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;b
 .form-buttons{display:flex;gap:1rem;margin-top:1.5rem;padding-top:1.25rem;border-top:1px solid var(--border-color)}
 .form-buttons button{flex:1}
 .gate-err{display:none;color:var(--danger);font-size:.8rem;font-weight:600;margin:-.25rem 0 .75rem}
+.lead-check{display:flex;align-items:flex-start;gap:.7rem;background:var(--misk-light);border:1px solid var(--border-color);border-radius:var(--radius-md);padding:.85rem 1rem;cursor:pointer}
+.lead-check input{width:18px;height:18px;margin-top:.15rem;accent-color:var(--misk-primary);flex:0 0 auto}
+.lead-check span{display:flex;flex-direction:column;gap:.2rem;font-weight:600;font-size:.88rem;color:var(--text-primary)}
+.lead-check small{font-weight:400;font-size:.78rem;color:var(--text-secondary)}
+.lead-flag{display:inline-flex;align-items:center;gap:5px;font-size:.68rem;font-weight:700;padding:.25rem .6rem;border-radius:7px;background:rgba(211,47,47,.1);color:var(--danger)}
+.lead-flag::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--danger)}
+.detail-actions{display:flex;gap:.65rem;flex-wrap:wrap;margin-bottom:1.5rem}
 .empty-state{text-align:center;padding:3rem 1rem;color:var(--text-secondary)}
 .empty-state svg{opacity:.4;margin-bottom:1rem}
 .empty-state h3{color:var(--text-primary);font-size:1.05rem;margin-bottom:.4rem}
@@ -306,6 +313,10 @@ body:not(.can-edit) .edit-only{display:none!important}
         <div class="stat-card"><div class="stat-icon info"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4 12 14.01l-3-3"/></svg></div><div class="stat-content"><h3 data-i18n="stat_low">منخفض</h3><div class="number" id="kLow">0</div></div></div>
         <div class="stat-card"><div class="stat-icon teal"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h9l-1 8 10-12h-9z"/></svg></div><div class="stat-content"><h3 data-i18n="stat_esc">مُصعّدة</h3><div class="number" id="kEsc">0</div></div></div>
       </div>
+      <div id="leadershipBlock" style="display:none;margin-bottom:2rem">
+        <h3 class="section-heading" style="display:flex;align-items:center;gap:.55rem;color:var(--danger)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg><span data-i18n="leadership_alerts">تنبيهات الإدارة العليا</span></h3>
+        <div class="issues-container" id="leadershipAlerts"></div>
+      </div>
       <h3 class="section-heading" data-i18n="active_cases">القضايا النشطة</h3>
       <div class="issues-container" id="dashIssues"></div>
     </section>
@@ -358,7 +369,10 @@ body:not(.can-edit) .edit-only{display:none!important}
     <div class="modal-header"><span id="formTitle" data-i18n="add_case_title">إضافة قضية جديدة</span><button class="close-btn" type="button" onclick="closeForm()">&times;</button></div>
     <input type="hidden" id="f_id" />
     <div class="form-group"><label><span data-i18n="f_title_label">العنوان</span> <span class="req">*</span> <span class="label-hint" data-i18n="f_title_hint">ما هي المشكلة؟</span></label><input id="f_title" data-i18n-ph="f_title_ph" placeholder="ما هي المشكلة؟" /><div class="err" id="e_title" data-i18n="err_title">العنوان مطلوب.</div></div>
-    <div class="form-group"><label data-i18n="f_status_label">الوضع</label><select id="f_status"></select></div>
+    <div class="form-row">
+      <div class="form-group"><label data-i18n="f_status_label">الوضع</label><select id="f_status"></select></div>
+      <div class="form-group"><label data-i18n="f_owner_label">الجهة المعنية / المسؤول</label><select id="f_owner"></select></div>
+    </div>
     <div class="form-group"><label><span data-i18n="f_summary_label">الملخص</span> <span class="label-hint" data-i18n="f_summary_hint">وصف موجز</span></label><textarea id="f_summary" data-i18n-ph="f_summary_ph" placeholder="وصف موجز"></textarea></div>
     <div class="sectionlbl" data-i18n="risk_scoring">تقييم المخاطر — كل بُعد من 1 (منخفض) إلى 5 (مرتفع)</div>
     <div id="dimFields"></div>
@@ -366,6 +380,9 @@ body:not(.can-edit) .edit-only{display:none!important}
     <div class="form-group" style="margin-top:1rem"><label><span data-i18n="f_expected_label">الأثر المتوقع</span> <span class="label-hint" data-i18n="f_expected_hint">ماذا يحدث إذا تصاعدت؟</span></label><textarea id="f_expected_impact" data-i18n-ph="f_expected_ph" placeholder="ماذا يحدث إذا تصاعدت؟"></textarea></div>
     <div class="form-group"><label><span data-i18n="f_action_label">الإجراء الموصى به</span> <span class="label-hint" data-i18n="f_action_hint">ما الذي ينبغي فعله؟</span></label><textarea id="f_recommended_action" data-i18n-ph="f_action_ph" placeholder="ما الذي ينبغي فعله؟"></textarea></div>
     <div class="form-group"><label><span data-i18n="f_refs_label">المراجع</span> <span class="label-hint" data-i18n="f_refs_hint">ألصق أي روابط</span></label><textarea id="f_reference_links" data-i18n-ph="f_refs_ph" placeholder="ألصق أي روابط"></textarea></div>
+    <div class="sectionlbl" data-i18n="share_actions">المشاركة والتصعيد</div>
+    <label class="lead-check"><input type="checkbox" id="f_needs_leadership" /><span><span data-i18n="f_leadership_label">يتطلب اطلاع الإدارة العليا</span><small data-i18n="f_leadership_hint">إظهار القضية في قسم تنبيهات الإدارة العليا.</small></span></label>
+    <div class="form-group" style="margin-top:1rem"><label data-i18n="f_advisory_label">مستوى الإحاطة المقترح</label><select id="f_advisory_level"></select></div>
     <div class="form-buttons"><button type="button" class="btn" onclick="closeForm()" data-i18n="cancel">إلغاء</button><button type="button" class="btn btn-primary" id="saveBtn" data-i18n="save_case">حفظ القضية</button></div>
   </div>
 </div>
@@ -378,6 +395,20 @@ body:not(.can-edit) .edit-only{display:none!important}
     <div class="form-group"><input type="password" id="gateInput" data-i18n-ph="access_code" placeholder="رمز الدخول" autocomplete="off" /></div>
     <div class="gate-err" id="gateErr" data-i18n="gate_err">رمز غير صحيح. حاول مجددًا.</div>
     <div class="form-buttons" style="border-top:none;margin-top:.25rem;padding-top:0"><button type="button" class="btn" onclick="closeLogin()" data-i18n="cancel">إلغاء</button><button type="button" class="btn btn-primary" id="gateBtn" data-i18n="enter_editing">الدخول لوضع التعديل</button></div>
+  </div>
+</div>
+
+<!-- ================= EMAIL DRAFT MODAL ================= -->
+<div class="modal" id="emailModal">
+  <div class="modal-content">
+    <div class="modal-header"><span data-i18n="email_draft_title">مسودة بريد إلكتروني</span><button class="close-btn" type="button" onclick="closeEmail()">&times;</button></div>
+    <p style="color:var(--text-secondary);font-size:.85rem;margin-bottom:1rem" data-i18n="email_hint">انسخ النص إلى Outlook أو Gmail، أو افتحه مباشرة في برنامج البريد.</p>
+    <div class="form-group"><textarea id="emailBody" style="min-height:300px;font-size:.85rem;line-height:1.7" readonly></textarea></div>
+    <div class="form-buttons" style="margin-top:.5rem">
+      <button type="button" class="btn" onclick="closeEmail()" data-i18n="close">إغلاق</button>
+      <button type="button" class="btn" id="emailCopyBtn" data-i18n="copy">نسخ</button>
+      <a class="btn btn-primary" id="emailOpenBtn" href="#" data-i18n="open_in_email" style="display:inline-flex;align-items:center;justify-content:center">فتح في البريد</a>
+    </div>
   </div>
 </div>
 
@@ -394,6 +425,10 @@ let editMode  = false;
 
 const CATEGORIES = ["Reputational","Media & Public","Social / Digital","Stakeholder","Operational","Governance"];
 const STATUSES   = ["Active","Monitoring","Escalated","Resolved"];
+/* Stakeholder / responsible party a case can be routed to. */
+const STAKEHOLDERS = ["CEO","Executive Office","Corporate Communications","Human Resources","Program Management","Legal","Marketing","Board"];
+/* Suggested leadership briefing level for the advisory note. */
+const ADVISORY_LEVELS = ["Info","FollowUp","Decision"];
 
 const DIMENSIONS = [
   {key:"severity",         label:"Severity",         q:"How serious is this right now?",            opts:["Minimal","Low","Moderate","High","Severe"]},
@@ -450,7 +485,32 @@ const I18N = {
     portfolio_avg:"Portfolio average", score:"score", case:"case", cases:"cases", dashed_line:"dashed line",
     all:"All", team:"Team", loading:"Loading…", no_notes:"No monitoring notes yet.",
     confirm_delete:"Delete this case permanently?", could_not_save:"Could not save: ", could_not_delete:"Could not delete: ",
-    connect_backend:"Connect the backend to save notes.", no_cases:"No cases yet."
+    connect_backend:"Connect the backend to save notes.", no_cases:"No cases yet.",
+    /* --- decision-support additions --- */
+    f_owner_label:"Stakeholder / Owner", f_owner_hint:"Who should this be routed to?", f_owner_none:"— Not assigned —",
+    f_leadership_label:"Requires senior management attention", f_leadership_hint:"Surface this case in the leadership alerts section.",
+    f_advisory_label:"Suggested briefing level", owner_word:"Stakeholder",
+    leadership_alerts:"Senior management alerts", leadership_alerts_sub:"Cases flagged as requiring leadership attention",
+    needs_leadership_badge:"Leadership",
+    btn_report:"Generate report", btn_email:"Email draft", btn_advisory:"Advisory note",
+    share_actions:"Share & escalate",
+    print:"Print", close:"Close", copy:"Copy", copied:"Copied!", open_in_email:"Open in email client",
+    email_draft_title:"Email draft", email_hint:"Copy this into Outlook or Gmail, or open it directly in your mail client.",
+    report_doc_title:"Executive Report", advisory_doc_title:"Leadership Advisory Note",
+    report_date:"Report date", briefing_date:"Briefing date", severity_level:"Severity level",
+    rep_escalation:"Escalation indicators",
+    adv_why:"Why it warrants attention", adv_org_impact:"Potential organizational impact",
+    adv_current_actions:"Current actions", adv_recommendation:"Recommended action for leadership",
+    adv_stakeholders:"Stakeholders involved", adv_level:"Briefing level", not_specified:"Not specified",
+    adv_Info:"For information only", adv_FollowUp:"Requires follow-up", adv_Decision:"Requires decision or direction",
+    email_greeting:"Dear colleagues,",
+    email_intro:"Please find below a summary of the following case from Crisis Radar:",
+    email_why:"Why this case matters", email_impact:"Potential impact", email_reco:"Recommendations",
+    email_attach:"Attached: a detailed executive report on this case.",
+    email_regards:"Best regards,\nCrisis Radar Team — Misk Foundation",
+    email_subject_prefix:"Case alert",
+    stake:{ "CEO":"CEO", "Executive Office":"Executive Office", "Corporate Communications":"Corporate Communications", "Human Resources":"Human Resources", "Program Management":"Program Management", "Legal":"Legal", "Marketing":"Marketing", "Board":"Board" },
+    adv:{ "Info":"For information only", "FollowUp":"Requires follow-up", "Decision":"Requires decision or direction" }
   },
   ar: {
     app_title:"رادار الأزمات", app_subtitle:"رصد حي للانطباع والمخاطر", org_name:"مؤسسة مسك",
@@ -492,6 +552,31 @@ const I18N = {
     all:"الكل", team:"الفريق", loading:"جارٍ التحميل…", no_notes:"لا توجد ملاحظات رصد بعد.",
     confirm_delete:"حذف هذه القضية نهائيًا؟", could_not_save:"تعذّر الحفظ: ", could_not_delete:"تعذّر الحذف: ",
     connect_backend:"اربط الخادم لحفظ الملاحظات.", no_cases:"لا توجد قضايا بعد.",
+    /* --- إضافات دعم اتخاذ القرار --- */
+    f_owner_label:"الجهة المعنية / المسؤول", f_owner_hint:"لمن تُحال هذه القضية؟", f_owner_none:"— غير محددة —",
+    f_leadership_label:"يتطلب اطلاع الإدارة العليا", f_leadership_hint:"إظهار القضية في قسم تنبيهات الإدارة العليا.",
+    f_advisory_label:"مستوى الإحاطة المقترح", owner_word:"الجهة المعنية",
+    leadership_alerts:"تنبيهات الإدارة العليا", leadership_alerts_sub:"القضايا التي تتطلب اطلاع الإدارة العليا",
+    needs_leadership_badge:"إحاطة الإدارة",
+    btn_report:"إصدار تقرير", btn_email:"مسودة بريد", btn_advisory:"مذكرة إحاطة",
+    share_actions:"المشاركة والتصعيد",
+    print:"طباعة", close:"إغلاق", copy:"نسخ", copied:"تم النسخ!", open_in_email:"فتح في برنامج البريد",
+    email_draft_title:"مسودة بريد إلكتروني", email_hint:"انسخ النص إلى Outlook أو Gmail، أو افتحه مباشرة في برنامج البريد.",
+    report_doc_title:"تقرير تنفيذي", advisory_doc_title:"مذكرة إحاطة قيادية",
+    report_date:"تاريخ إصدار التقرير", briefing_date:"تاريخ الإحاطة", severity_level:"مستوى الخطورة",
+    rep_escalation:"مؤشرات التصعيد",
+    adv_why:"لماذا تستحق المتابعة", adv_org_impact:"التأثير المحتمل على المؤسسة",
+    adv_current_actions:"الإجراءات الحالية", adv_recommendation:"التوصية المقترحة للإدارة",
+    adv_stakeholders:"الجهات وأصحاب المصلحة المعنيون", adv_level:"مستوى الإحاطة", not_specified:"غير محددة",
+    adv_Info:"للإحاطة فقط", adv_FollowUp:"يتطلب المتابعة", adv_Decision:"يتطلب قراراً أو توجيهاً",
+    email_greeting:"السلام عليكم ورحمة الله،",
+    email_intro:"نرفع لكم ملخصاً للقضية التالية ضمن رادار الأزمات:",
+    email_why:"أهمية القضية", email_impact:"التأثير المحتمل", email_reco:"التوصيات",
+    email_attach:"مرفق: تقرير تنفيذي مفصّل عن القضية.",
+    email_regards:"مع التحية،\nفريق رادار الأزمات — مؤسسة مسك",
+    email_subject_prefix:"تنبيه قضية",
+    stake:{ "CEO":"الرئيس التنفيذي", "Executive Office":"المكتب التنفيذي", "Corporate Communications":"الاتصال المؤسسي", "Human Resources":"الموارد البشرية", "Program Management":"إدارة البرامج", "Legal":"الشؤون القانونية", "Marketing":"التسويق", "Board":"مجلس الإدارة" },
+    adv:{ "Info":"للإحاطة فقط", "FollowUp":"يتطلب المتابعة", "Decision":"يتطلب قراراً أو توجيهاً" },
     cat:{ "Reputational":"السمعة", "Media & Public":"الإعلام والجمهور", "Social / Digital":"التواصل الاجتماعي / الرقمي", "Stakeholder":"أصحاب المصلحة", "Operational":"تشغيلي", "Governance":"الحوكمة" },
     status:{ "Active":"نشطة", "Monitoring":"قيد الرصد", "Escalated":"مُصعّدة", "Resolved":"مُغلقة" },
     dims:{
@@ -511,6 +596,8 @@ function dQ(d){ return LANG==="ar" ? I18N.ar.dims[d.key].q : d.q; }
 function dOpt(d,i){ return LANG==="ar" ? I18N.ar.dims[d.key].opts[i] : d.opts[i]; }
 function catLabel(v){ return LANG==="ar" ? (I18N.ar.cat[v]||v) : v; }
 function statusLabel(v){ return LANG==="ar" ? (I18N.ar.status[v]||v) : v; }
+function stakeLabel(v){ if(!v) return ""; const d=I18N[LANG]||I18N.en; return (d.stake&&d.stake[v])||(I18N.en.stake[v])||v; }
+function advLabel(v){ if(!v) return ""; const d=I18N[LANG]||I18N.en; return (d.adv&&d.adv[v])||(I18N.en.adv[v])||v; }
 function clsLabel(c){ return t("cls_"+c); }
 
 /* ---- state ---- */
@@ -564,6 +651,8 @@ async function saveCase(){
   if(!title){ document.getElementById("e_title").style.display="block"; return; }
   document.getElementById("e_title").style.display="none";
   const rec={ title, summary:val("f_summary").trim()||null, status:val("f_status"),
+    owner:val("f_owner")||null, advisory_level:val("f_advisory_level")||null,
+    needs_leadership:document.getElementById("f_needs_leadership").checked,
     expected_impact:val("f_expected_impact").trim()||null, recommended_action:val("f_recommended_action").trim()||null,
     reference_links:val("f_reference_links").trim()||null };
   DIMENSIONS.forEach(d=> rec[d.key]=+val("f_"+d.key) );
@@ -642,9 +731,11 @@ function cardHTML(c){
   const cls=clsOf(c), v=variantOf(c), sc=compositeScore(c).toFixed(1);
   const metrics=DIMENSIONS.map(d=>{ const x=+c[d.key]||0; return `<div class="metric"><div class="metric-label">${esc(dLabel(d))}</div><div class="metric-bar"><div class="metric-fill" style="width:${x*20}%"></div></div><div class="metric-value">${x}/5</div></div>`; }).join("");
   const sum=c.summary?esc(c.summary).slice(0,160)+(c.summary.length>160?"…":""):"";
+  const ownerTag=c.owner?`<span class="cat-tag">${esc(stakeLabel(c.owner))}</span>`:"";
+  const leadTag=c.needs_leadership?`<span class="lead-flag">${esc(t("needs_leadership_badge"))}</span>`:"";
   return `<div class="issue-card ${v}" data-id="${esc(c.id)}" onclick="openDetail('${esc(c.id)}')">
     <div class="issue-header"><div class="issue-title">${esc(c.title)}</div><span class="badge ${v}"><span class="bd"></span>${clsLabel(cls)} · ${sc}/5</span></div>
-    <div class="issue-meta-row"><span class="st st-${c.status}">${esc(statusLabel(c.status))}</span></div>
+    <div class="issue-meta-row"><span class="st st-${c.status}">${esc(statusLabel(c.status))}</span>${ownerTag}${leadTag}</div>
     ${sum?`<div class="issue-summary">${sum}</div>`:""}
     <div class="metrics-row">${metrics}</div>
     <div class="action-buttons">
@@ -660,6 +751,9 @@ function fillList(id, list, emptyKey){
     : `<div class="empty-state"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg><h3>${esc(t(emptyKey))}</h3></div>`;
 }
 function renderLists(){
+  const lead = CASES.filter(c=>c.needs_leadership).slice().sort((a,b)=>compositeScore(b)-compositeScore(a));
+  const lb=document.getElementById("leadershipBlock"); if(lb) lb.style.display = lead.length ? "block" : "none";
+  fillList("leadershipAlerts", lead, "no_cases");
   const dash = CASES.filter(c=>c.status!=="Resolved").slice().sort((a,b)=>compositeScore(b)-compositeScore(a));
   fillList("dashIssues", dash, "no_cases");
   fillList("allIssues", visibleCases(), "empty_title");
@@ -708,12 +802,19 @@ async function openDetail(id){
     <button class="btn-back" type="button" onclick="backToList()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 18l-6-6 6-6"/></svg>${esc(t("back"))}</button>
     <div class="detail-header">
       <span class="badge ${v}"><span class="bd"></span>${clsLabel(cls)} · ${sc}/5</span>
+      ${c.needs_leadership?`<span class="lead-flag" style="margin-inline-start:.5rem">${esc(t("needs_leadership_badge"))}</span>`:""}
       <h1 class="detail-title">${esc(c.title)}</h1>
       <div class="detail-meta">
         <div class="meta-item"><div class="meta-label">${esc(t("created_label"))}</div><div class="meta-value">${fmtDate(c.created_at)}</div></div>
         <div class="meta-item"><div class="meta-label">${esc(t("status_word"))}</div><div class="meta-value"><span class="st st-${c.status}">${esc(statusLabel(c.status))}</span></div></div>
         <div class="meta-item"><div class="meta-label">${esc(t("classification_word"))}</div><div class="meta-value" style="color:${col}">${clsLabel(cls)}</div></div>
+        ${c.owner?`<div class="meta-item"><div class="meta-label">${esc(t("owner_word"))}</div><div class="meta-value">${esc(stakeLabel(c.owner))}</div></div>`:""}
       </div>
+    </div>
+    <div class="detail-actions">
+      <button class="btn btn-primary" type="button" onclick="generateReport('${esc(c.id)}')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg>${esc(t("btn_report"))}</button>
+      <button class="btn" type="button" onclick="generateAdvisory('${esc(c.id)}')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 2 7l10 5 10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>${esc(t("btn_advisory"))}</button>
+      <button class="btn" type="button" onclick="generateEmail('${esc(c.id)}')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>${esc(t("btn_email"))}</button>
     </div>
     <div class="grid-2">
       <div class="section"><h3><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/></svg>${esc(t("exec_summary"))}</h3><div class="body-text">${esc(c.summary||"—")}</div></div>
@@ -757,6 +858,10 @@ function rebuildDimFields(){
 function fillFormSelects(){
   const st=document.getElementById("f_status"); const sv=st.value;
   st.innerHTML=""; STATUSES.forEach(s=>st.add(new Option(statusLabel(s),s))); st.value=sv||STATUSES[0];
+  const ow=document.getElementById("f_owner"); const ov=ow.value;
+  ow.innerHTML=""; ow.add(new Option(t("f_owner_none"),"")); STAKEHOLDERS.forEach(s=>ow.add(new Option(stakeLabel(s),s))); ow.value=ov||"";
+  const av=document.getElementById("f_advisory_level"); const avv=av.value;
+  av.innerHTML=""; ADVISORY_LEVELS.forEach(s=>av.add(new Option(advLabel(s),s))); av.value=avv||ADVISORY_LEVELS[0];
 }
 function updatePreview(){
   const tmp={}; DIMENSIONS.forEach(d=> tmp[d.key]=+val("f_"+d.key) );
@@ -771,12 +876,15 @@ function openForm(id){
     const c=CASES.find(x=>x.id===id); if(!c) return;
     document.getElementById("formTitle").textContent=t("edit_case_title");
     set2("f_id",id);set2("f_title",c.title);set2("f_status",c.status);
+    set2("f_owner",c.owner||"");set2("f_advisory_level",c.advisory_level||ADVISORY_LEVELS[0]);
+    document.getElementById("f_needs_leadership").checked=!!c.needs_leadership;
     set2("f_summary",c.summary||"");set2("f_expected_impact",c.expected_impact||"");set2("f_recommended_action",c.recommended_action||"");set2("f_reference_links",c.reference_links||"");
     DIMENSIONS.forEach(d=>{ const x=c[d.key]||3; set2("f_"+d.key,x); const sv=document.getElementById("sv_"+d.key); if(sv) sv.textContent=x; const so=document.getElementById("so_"+d.key); if(so) so.textContent=dOpt(d,(x-1)); });
   } else {
     document.getElementById("formTitle").textContent=t("add_case_title");
-    ["f_id","f_title","f_summary","f_expected_impact","f_recommended_action","f_reference_links"].forEach(i=>set2(i,""));
-    set2("f_status","Active");
+    ["f_id","f_title","f_summary","f_expected_impact","f_recommended_action","f_reference_links","f_owner"].forEach(i=>set2(i,""));
+    set2("f_status","Active");set2("f_advisory_level",ADVISORY_LEVELS[0]);
+    document.getElementById("f_needs_leadership").checked=false;
     DIMENSIONS.forEach(d=>{ set2("f_"+d.key,3); const sv=document.getElementById("sv_"+d.key); if(sv) sv.textContent=3; const so=document.getElementById("so_"+d.key); if(so) so.textContent=dOpt(d,2); });
   }
   updatePreview();
@@ -798,6 +906,153 @@ function exportCSV(){
   const blob=new Blob([head+"\n"+body],{type:"text/csv"}); const a=document.createElement("a");
   a.href=URL.createObjectURL(blob); a.download="misk-crisis-radar-"+new Date().toISOString().slice(0,10)+".csv"; a.click();
 }
+
+/* ============ DECISION-SUPPORT: REPORT / ADVISORY / EMAIL ============ */
+/* The escalation indicators surfaced on reports & advisory notes. */
+function escalationIndicators(c){
+  return ["escalation_risk","urgency","reach"].map(k=>{
+    const d=DIMENSIONS.find(x=>x.key===k); const x=+c[k]||0;
+    return {label:dLabel(d), value:x, opt:dOpt(d,x-1)||"—"};
+  });
+}
+/* A short auto-generated rationale for why a case warrants attention. */
+function whyText(c){
+  const cls=clsLabel(clsOf(c)), sc=compositeScore(c).toFixed(1);
+  const tops=DIMENSIONS.map(d=>({d,x:+c[d.key]||0})).sort((a,b)=>b.x-a.x).slice(0,2)
+    .map(o=>`${dLabel(o.d)} (${o.x}/5)`).join(LANG==="ar"?"، ":", ");
+  return LANG==="ar"
+    ? `تصنيف القضية ${cls} بدرجة ${sc}/5. أبرز عوامل الخطورة: ${tops}.`
+    : `Classified ${cls} at ${sc}/5. Key risk drivers: ${tops}.`;
+}
+
+/* ---- printable document machinery (brand-styled, self-hosted fonts) ---- */
+const AR_RANGE="U+0600-06FF,U+0750-077F,U+0870-088E,U+0898-08E1,U+08E3-08FF,U+200C-200E,U+2010-2011,U+FB50-FDFF,U+FE70-FEFF";
+function printFontCss(){
+  const dir=location.origin+"/assets/fonts/"; let s="";
+  [400,500,600,700].forEach(w=>{
+    s+=`@font-face{font-family:'IBM Plex Sans Arabic';font-weight:${w};font-display:swap;src:url('${dir}ibm-plex-sans-arabic-arabic-${w}.woff2') format('woff2');unicode-range:${AR_RANGE}}`;
+    s+=`@font-face{font-family:'IBM Plex Sans Arabic';font-weight:${w};font-display:swap;src:url('${dir}ibm-plex-sans-arabic-latin-${w}.woff2') format('woff2')}`;
+    s+=`@font-face{font-family:'DM Sans';font-weight:${w};font-display:swap;src:url('${dir}dm-sans-latin-${w}.woff2') format('woff2')}`;
+  });
+  return s;
+}
+const PRINT_CSS=`*{margin:0;padding:0;box-sizing:border-box}
+:root{--g:#1B7D5C;--t:#2DB89F;--ink:#1B1B1B;--mut:#5A5A5A;--bd:#E2E9E6;--light:#F5F9F8}
+html,body{background:#EEF3F1}
+body{font-family:'IBM Plex Sans Arabic','DM Sans',system-ui,sans-serif;color:var(--ink);line-height:1.7}
+.docbar{position:sticky;top:0;display:flex;gap:10px;justify-content:flex-end;padding:12px 16px;background:#fff;border-bottom:1px solid var(--bd);z-index:5}
+.docbar button{font:inherit;font-weight:600;font-size:.85rem;padding:8px 18px;border-radius:8px;border:1px solid var(--bd);background:#fff;color:var(--ink);cursor:pointer}
+.docbar button:first-child{background:linear-gradient(135deg,var(--g),var(--t));color:#fff;border:none}
+.doc{max-width:820px;margin:18px auto;background:#fff;border:1px solid var(--bd);border-radius:14px;overflow:hidden}
+.brandband{display:flex;align-items:center;gap:16px;padding:22px 30px;background:linear-gradient(135deg,var(--g),var(--t));color:#fff}
+.bb-logo{width:48px;height:48px;border-radius:12px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.05rem;flex:0 0 auto}
+.bb-text{flex:1}.bb-title{font-size:1.15rem;font-weight:700}.bb-sub{font-size:.8rem;opacity:.88}
+.bb-date{text-align:end;font-size:.78rem;opacity:.95;display:flex;flex-direction:column;gap:2px}.bb-date b{font-size:.92rem}
+.doc-h1{font-size:1.5rem;font-weight:700;color:var(--g);padding:26px 30px 0}
+.doc-meta{display:flex;flex-wrap:wrap;gap:10px;padding:16px 30px 6px}
+.chiprow{display:inline-flex;flex-direction:column;gap:2px;background:var(--light);border:1px solid var(--bd);border-radius:9px;padding:7px 13px;font-size:.82rem}
+.chiprow i{font-style:normal;font-size:.68rem;text-transform:uppercase;letter-spacing:.4px;color:var(--mut);font-weight:700}.chiprow b{font-weight:700}
+.doc-sec{padding:14px 30px;border-top:1px solid var(--bd);margin-top:14px}.doc-sec:first-of-type{border-top:none;margin-top:6px}
+.doc-sec h2{font-size:.95rem;font-weight:700;color:var(--g);margin-bottom:8px}
+.doc-body{font-size:.9rem;color:#27302C}.doc-body p{white-space:pre-wrap}
+.muted{color:var(--mut)}
+.doc-tbl{width:100%;border-collapse:collapse;font-size:.86rem}
+.doc-tbl th,.doc-tbl td{text-align:start;padding:8px 10px;border-bottom:1px solid var(--bd)}
+.doc-tbl th{background:var(--light);font-weight:700;color:var(--mut);font-size:.72rem;text-transform:uppercase;letter-spacing:.3px}
+.doc-tbl td.num{font-weight:700;color:var(--g)}
+.doc-ul{margin:0;padding-inline-start:20px;font-size:.9rem}.doc-ul li{margin-bottom:5px}
+.doc-tl{list-style:none}.doc-tl li{display:flex;flex-direction:column;gap:2px;padding:8px 0;border-bottom:1px solid var(--bd)}.doc-tl li:last-child{border-bottom:none}
+.tl-date{font-size:.74rem;color:var(--mut);font-weight:600}
+.doc-foot{padding:18px 30px;color:var(--mut);font-size:.76rem;border-top:1px solid var(--bd)}
+a{color:var(--g);word-break:break-all}
+@media print{html,body{background:#fff}.docbar{display:none}.doc{border:none;border-radius:0;margin:0;max-width:100%}@page{margin:14mm}}`;
+function openPrintWindow(titleText, bodyHtml){
+  const w=window.open("","_blank");
+  if(!w){ alert(LANG==="ar"?"يرجى السماح بالنوافذ المنبثقة لإصدار المستند.":"Please allow pop-ups to generate the document."); return; }
+  const dir=LANG==="ar"?"rtl":"ltr";
+  w.document.open();
+  w.document.write(`<!DOCTYPE html><html dir="${dir}" lang="${LANG}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(titleText)}</title><style>${printFontCss()}${PRINT_CSS}</style></head><body>${bodyHtml}</body></html>`);
+  w.document.close();
+}
+function docFrame(inner){
+  return `<div class="docbar"><button type="button" onclick="window.print()">${esc(t("print"))}</button><button type="button" onclick="window.close()">${esc(t("close"))}</button></div><div class="doc">${inner}</div>`;
+}
+function docHead(kicker,dateLabel,dateVal){
+  return `<header class="brandband"><div class="bb-logo">${LANG==="ar"?"مسك":"MISK"}</div><div class="bb-text"><div class="bb-title">${esc(kicker)}</div><div class="bb-sub">${LANG==="ar"?"رادار الأزمات · مؤسسة مسك":"Crisis Radar · Misk Foundation"}</div></div><div class="bb-date"><span>${esc(dateLabel)}</span><b>${esc(dateVal)}</b></div></header>`;
+}
+function docSection(title,contentHtml){ return `<section class="doc-sec"><h2>${esc(title)}</h2><div class="doc-body">${contentHtml}</div></section>`; }
+function metaChip(label,value,color){ return `<span class="chiprow"><i>${esc(label)}</i><b${color?` style="color:${color}"`:""}>${value}</b></span>`; }
+
+async function generateReport(id){
+  const c=CASES.find(x=>x.id===id); if(!c) return;
+  const cls=clsOf(c), sc=compositeScore(c).toFixed(1), col=CLS_COLOR[cls];
+  const today=fmtDate(new Date().toISOString());
+  const notes=await loadNotes(id);
+  const riskRows=DIMENSIONS.map(d=>{ const x=+c[d.key]||0; return `<tr><td>${esc(dLabel(d))}</td><td class="num">${x}/5</td><td>${esc(dOpt(d,x-1)||"—")}</td></tr>`; }).join("");
+  const escInd=escalationIndicators(c).map(o=>`<li><b>${esc(o.label)}:</b> ${o.value}/5 — ${esc(o.opt)}</li>`).join("");
+  const tl=notes.length? `<ul class="doc-tl">`+notes.map(n=>`<li><span class="tl-date">${esc(n.author||t("team"))} · ${fmtDateTime(n.created_at)}</span><span>${esc(n.note)}</span></li>`).join("")+`</ul>` : `<p class="muted">—</p>`;
+  const chips=[metaChip(t("classification_word"),`${clsLabel(cls)} · ${sc}/5`,col),metaChip(t("status_word"),esc(statusLabel(c.status))),c.owner?metaChip(t("owner_word"),esc(stakeLabel(c.owner))):"",metaChip(t("created_label"),fmtDate(c.created_at))].join("");
+  const inner=docHead(t("report_doc_title"),t("report_date"),today)
+    +`<h1 class="doc-h1">${esc(c.title)}</h1><div class="doc-meta">${chips}</div>`
+    +docSection(t("exec_summary"),`<p>${esc(c.summary)||"—"}</p>`)
+    +docSection(t("initial_assessment"),`<table class="doc-tbl"><thead><tr><th>${esc(LANG==="ar"?"البُعد":"Dimension")}</th><th>${esc(LANG==="ar"?"الدرجة":"Score")}</th><th>${esc(LANG==="ar"?"التقييم":"Rating")}</th></tr></thead><tbody>${riskRows}</tbody></table>`)
+    +docSection(t("expected_title"),`<p>${esc(c.expected_impact)||"—"}</p>`)
+    +docSection(t("rep_escalation"),`<ul class="doc-ul">${escInd}</ul>`)
+    +docSection(t("action_title"),`<p>${esc(c.recommended_action)||"—"}</p>`)
+    +docSection(t("refs_title"),`<p>${linkify(c.reference_links)}</p>`)
+    +docSection(t("timeline_title"),tl)
+    +`<div class="doc-foot">${esc(t("report_date"))}: ${esc(today)} · ${LANG==="ar"?"مسك · رادار الأزمات":"Misk · Crisis Radar"}</div>`;
+  openPrintWindow(t("report_doc_title")+" — "+c.title, docFrame(inner));
+}
+function generateAdvisory(id){
+  const c=CASES.find(x=>x.id===id); if(!c) return;
+  const cls=clsOf(c), sc=compositeScore(c).toFixed(1), col=CLS_COLOR[cls];
+  const today=fmtDate(new Date().toISOString());
+  const level=c.advisory_level||"Info";
+  const escInd=escalationIndicators(c).map(o=>`<li><b>${esc(o.label)}:</b> ${o.value}/5 — ${esc(o.opt)}</li>`).join("");
+  const chips=[metaChip(t("severity_level"),`${clsLabel(cls)} · ${sc}/5`,col),metaChip(t("adv_level"),esc(advLabel(level))),metaChip(t("status_word"),esc(statusLabel(c.status)))].join("");
+  const inner=docHead(t("advisory_doc_title"),t("briefing_date"),today)
+    +`<h1 class="doc-h1">${esc(c.title)}</h1><div class="doc-meta">${chips}</div>`
+    +docSection(t("exec_summary"),`<p>${esc(c.summary)||"—"}</p>`)
+    +docSection(t("adv_why"),`<p>${esc(whyText(c))}</p>`)
+    +docSection(t("adv_org_impact"),`<p>${esc(c.expected_impact)||"—"}</p>`)
+    +docSection(t("rep_escalation"),`<ul class="doc-ul">${escInd}</ul>`)
+    +docSection(t("adv_stakeholders"),`<p>${c.owner?esc(stakeLabel(c.owner)):esc(t("not_specified"))}</p>`)
+    +docSection(t("adv_current_actions"),`<p>${esc(c.recommended_action)||"—"}</p>`)
+    +docSection(t("adv_recommendation"),`<p><b style="color:${col}">${esc(advLabel(level))}</b><br>${esc(c.recommended_action)||"—"}</p>`)
+    +`<div class="doc-foot">${esc(t("briefing_date"))}: ${esc(today)} · ${LANG==="ar"?"مسك · رادار الأزمات":"Misk · Crisis Radar"}</div>`;
+  openPrintWindow(t("advisory_doc_title")+" — "+c.title, docFrame(inner));
+}
+function generateEmail(id){
+  const c=CASES.find(x=>x.id===id); if(!c) return;
+  const cls=clsLabel(clsOf(c)), sc=compositeScore(c).toFixed(1);
+  const subject=`[${t("email_subject_prefix")}] ${c.title} — ${cls} (${sc}/5)`;
+  const L=[];
+  L.push(t("email_greeting"),"");
+  L.push(t("email_intro"),"");
+  L.push(`• ${c.title}`);
+  L.push(`• ${t("classification_word")}: ${cls} (${sc}/5)  ·  ${t("status_word")}: ${statusLabel(c.status)}`);
+  if(c.owner) L.push(`• ${t("owner_word")}: ${stakeLabel(c.owner)}`);
+  L.push("");
+  if(c.summary){ L.push(t("exec_summary")+":", c.summary, ""); }
+  L.push(t("email_why")+":", whyText(c), "");
+  if(c.expected_impact){ L.push(t("email_impact")+":", c.expected_impact, ""); }
+  if(c.recommended_action){ L.push(t("email_reco")+":", c.recommended_action, ""); }
+  L.push(t("email_attach"), "");
+  L.push(t("email_regards"));
+  const body=L.join("\n");
+  document.getElementById("emailBody").value=body;
+  const a=document.getElementById("emailOpenBtn");
+  a.href=`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  const cb=document.getElementById("emailCopyBtn"); cb.textContent=t("copy");
+  cb.onclick=()=>{ const ta=document.getElementById("emailBody"); ta.focus(); ta.select();
+    const done=()=>{ cb.textContent=t("copied"); setTimeout(()=>cb.textContent=t("copy"),1800); };
+    if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(ta.value).then(done,()=>{try{document.execCommand("copy");}catch(e){} done();}); }
+    else { try{document.execCommand("copy");}catch(e){} done(); }
+  };
+  document.getElementById("emailModal").classList.add("active");
+}
+function closeEmail(){ document.getElementById("emailModal").classList.remove("active"); }
 
 /* ============ I18N APPLY ============ */
 function applyLang(){
@@ -840,8 +1095,8 @@ document.getElementById("gateBtn").onclick=tryLogin;
 document.getElementById("gateInput").addEventListener("keydown",e=>{if(e.key==="Enter")tryLogin();});
 document.getElementById("navToggle").onclick=()=>document.getElementById("sidebar").classList.toggle("open");
 document.querySelectorAll(".menu-item").forEach(b=>b.addEventListener("click",()=>showView(b.dataset.view)));
-[document.getElementById("issueModal"),document.getElementById("loginModal")].forEach(o=>o.addEventListener("click",e=>{if(e.target===o)o.classList.remove("active");}));
-document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeForm();closeLogin();}});
+[document.getElementById("issueModal"),document.getElementById("loginModal"),document.getElementById("emailModal")].forEach(o=>o.addEventListener("click",e=>{if(e.target===o)o.classList.remove("active");}));
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeForm();closeLogin();closeEmail();}});
 function start(){
   if(EDIT_CODE){ editMode=true; document.body.classList.add("can-edit"); }
   updateLoginBtn(); buildFilters(); loadCases(); initRealtime();

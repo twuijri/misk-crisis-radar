@@ -38,6 +38,9 @@ async function migrate() {
       expected_impact    text,
       recommended_action text,
       reference_links    text,
+      owner              text,
+      needs_leadership   boolean DEFAULT false,
+      advisory_level     text,
       severity           int  DEFAULT 1,
       urgency            int  DEFAULT 1,
       reach              int  DEFAULT 1,
@@ -48,6 +51,11 @@ async function migrate() {
       updated_at         timestamptz DEFAULT now()
     );
   `);
+  // Idempotent column adds so already-deployed databases gain the new
+  // decision-support fields without a manual migration.
+  await pool.query(`ALTER TABLE crisis_cases ADD COLUMN IF NOT EXISTS owner text;`);
+  await pool.query(`ALTER TABLE crisis_cases ADD COLUMN IF NOT EXISTS needs_leadership boolean DEFAULT false;`);
+  await pool.query(`ALTER TABLE crisis_cases ADD COLUMN IF NOT EXISTS advisory_level text;`);
   await pool.query(`
     CREATE TABLE IF NOT EXISTS case_updates (
       id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -100,6 +108,9 @@ function sanitize(body, requireTitle) {
   if (requireTitle && (!cols.title || cols.title.length === 0)) return null;
   if (body.category !== undefined) cols.category = body.category ? String(body.category) : null;
   if (body.status !== undefined) cols.status = body.status ? String(body.status) : "Active";
+  if (body.owner !== undefined) cols.owner = body.owner ? String(body.owner) : null;
+  if (body.advisory_level !== undefined) cols.advisory_level = body.advisory_level ? String(body.advisory_level) : null;
+  if (body.needs_leadership !== undefined) cols.needs_leadership = !!body.needs_leadership;
   TEXT_FIELDS.forEach((f) => {
     if (body[f] !== undefined) cols[f] = body[f] ? String(body[f]) : null;
   });
