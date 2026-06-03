@@ -9,3 +9,7 @@ Thumbs.db
 .idea/
 .vscode/
 .claude/
+
+# Build artifacts & dependencies (rebuilt in the Docker image / CI)
+node_modules/
+voices/dist/

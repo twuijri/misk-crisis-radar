@@ -65,6 +65,17 @@ async function migrate() {
       created_at timestamptz DEFAULT now()
     );
   `);
+  // Generic key/value store. Used by the Voice of Beneficiaries Library to
+  // persist its whole JSON document (key 'vobl') and by the AI proxy to keep
+  // the OpenAI-compatible server config + key (key '__ai_config__') — all in
+  // the same persistent Postgres volume, never in the browser.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS kv_store (
+      key        text PRIMARY KEY,
+      value      jsonb,
+      updated_at timestamptz DEFAULT now()
+    );
+  `);
   await pool.query(`
     CREATE OR REPLACE FUNCTION set_updated_at() RETURNS trigger AS $$
     BEGIN NEW.updated_at = now(); RETURN NEW; END;
@@ -135,12 +146,17 @@ app.use(express.json({ limit: "256kb" }));
 
 const WRITE_METHODS = ["POST", "PATCH", "PUT", "DELETE"];
 
-// Reads are public. Writes require the editor access code. The /api/auth
-// route checks the code itself, so it is allowed through here.
+// Crisis-radar reads are public; its writes require the editor access code.
+// The Voice of Beneficiaries Library is fully private: everything under
+// /api/kv and /api/ai requires the code for EVERY method (even reads), so a
+// visitor at /voices/ sees nothing until they log in. The /api/auth route
+// checks the code itself, so it is allowed through here.
+const PRIVATE_PREFIXES = ["/api/kv", "/api/ai"];
 app.use((req, res, next) => {
   if (req.path === "/api/health" || req.path === "/health") return next();
   if (req.path === "/api/auth") return next();
-  if (!WRITE_METHODS.includes(req.method)) return next();
+  const isPrivate = PRIVATE_PREFIXES.some((p) => req.path === p || req.path.startsWith(p + "/"));
+  if (!isPrivate && !WRITE_METHODS.includes(req.method)) return next();
   if (!ACCESS_CODE) return next();
   const code = req.headers["x-access-code"] || "";
   if (code === ACCESS_CODE) return next();
@@ -214,6 +230,120 @@ r.post("/cases/:id/notes", asyncRoute(async (req, res) => {
     [req.params.id, author, note]
   );
   res.status(201).json(rows[0]);
+}));
+
+/* ------------------------------------------------------------
+   Key/value store — backs the Voice of Beneficiaries Library.
+   Gated for all methods by the middleware above. Keys are limited
+   to a safe charset; the AI config key is reserved (served via the
+   dedicated /ai/config route, never raw).
+   ------------------------------------------------------------ */
+const AI_CONFIG_KEY = "__ai_config__";
+function validKvKey(k) {
+  return typeof k === "string" && /^[A-Za-z0-9:_-]{1,120}$/.test(k);
+}
+
+r.get("/kv/:key", asyncRoute(async (req, res) => {
+  const key = req.params.key;
+  if (!validKvKey(key) || key === AI_CONFIG_KEY) return res.status(400).json({ error: "invalid key" });
+  const { rows } = await pool.query("SELECT value FROM kv_store WHERE key = $1", [key]);
+  if (rows.length === 0) return res.json({ value: null });
+  res.json({ value: rows[0].value });
+}));
+
+r.put("/kv/:key", asyncRoute(async (req, res) => {
+  const key = req.params.key;
+  if (!validKvKey(key) || key === AI_CONFIG_KEY) return res.status(400).json({ error: "invalid key" });
+  const value = req.body && req.body.value !== undefined ? req.body.value : req.body;
+  await pool.query(
+    `INSERT INTO kv_store (key, value, updated_at) VALUES ($1, $2, now())
+     ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`,
+    [key, value]
+  );
+  res.json({ ok: true });
+}));
+
+/* ------------------------------------------------------------
+   AI config + proxy. The OpenAI-compatible base URL, model and API
+   key live server-side in kv_store (persistent volume). The key is
+   never returned to the browser — GET reports only whether it is set.
+   ------------------------------------------------------------ */
+async function getAiConfig() {
+  const { rows } = await pool.query("SELECT value FROM kv_store WHERE key = $1", [AI_CONFIG_KEY]);
+  return (rows[0] && rows[0].value) || {};
+}
+
+r.get("/ai/config", asyncRoute(async (req, res) => {
+  const c = await getAiConfig();
+  res.json({ baseUrl: c.baseUrl || "", model: c.model || "", hasKey: !!c.apiKey });
+}));
+
+r.put("/ai/config", asyncRoute(async (req, res) => {
+  const body = req.body || {};
+  const current = await getAiConfig();
+  const next = {
+    baseUrl: body.baseUrl !== undefined ? String(body.baseUrl || "").trim() : (current.baseUrl || ""),
+    model: body.model !== undefined ? String(body.model || "").trim() : (current.model || ""),
+    // Empty/omitted apiKey keeps the existing one; sending "__clear__" wipes it.
+    apiKey: current.apiKey || "",
+  };
+  if (body.apiKey !== undefined) {
+    const k = String(body.apiKey || "").trim();
+    if (k === "__clear__") next.apiKey = "";
+    else if (k) next.apiKey = k;
+  }
+  await pool.query(
+    `INSERT INTO kv_store (key, value, updated_at) VALUES ($1, $2, now())
+     ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`,
+    [AI_CONFIG_KEY, next]
+  );
+  res.json({ baseUrl: next.baseUrl, model: next.model, hasKey: !!next.apiKey });
+}));
+
+r.post("/ai/complete", asyncRoute(async (req, res) => {
+  const cfg = await getAiConfig();
+  if (!cfg.baseUrl || !cfg.model) {
+    return res.status(400).json({ error: "AI not configured" });
+  }
+  const system = req.body && req.body.system ? String(req.body.system) : "";
+  const prompt = req.body && req.body.prompt ? String(req.body.prompt) : "";
+  const maxTokens = req.body && req.body.max_tokens ? parseInt(req.body.max_tokens, 10) : 1000;
+  if (!prompt) return res.status(400).json({ error: "prompt is required" });
+
+  const messages = [];
+  if (system) messages.push({ role: "system", content: system });
+  messages.push({ role: "user", content: prompt });
+
+  // Normalise to the OpenAI chat-completions endpoint (LiteLLM compatible).
+  const base = cfg.baseUrl.replace(/\/+$/, "");
+  const url = /\/chat\/completions$/.test(base) ? base : base + "/chat/completions";
+
+  let upstream;
+  try {
+    upstream = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(cfg.apiKey ? { Authorization: "Bearer " + cfg.apiKey } : {}),
+      },
+      body: JSON.stringify({
+        model: cfg.model,
+        max_tokens: Number.isNaN(maxTokens) ? 1000 : maxTokens,
+        messages,
+      }),
+    });
+  } catch (e) {
+    return res.status(502).json({ error: "upstream unreachable: " + e.message });
+  }
+  if (!upstream.ok) {
+    let detail = "HTTP " + upstream.status;
+    try { const j = await upstream.json(); if (j && j.error) detail = j.error.message || JSON.stringify(j.error); } catch (e) {}
+    return res.status(502).json({ error: "ai error: " + detail });
+  }
+  const json = await upstream.json();
+  const text =
+    (json.choices && json.choices[0] && json.choices[0].message && json.choices[0].message.content) || "";
+  res.json({ text: String(text).trim() });
 }));
 
 app.use("/api", r);

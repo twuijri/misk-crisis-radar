@@ -1,0 +1,18 @@
+# Keep the build context small and free of secrets / local noise.
+.git
+.github
+.env
+.env.local
+*.local
+.DS_Store
+.idea/
+.vscode/
+.claude/
+README.md
+
+# Library build artifacts & deps are rebuilt inside the image.
+voices/node_modules
+voices/dist
+
+# The api image builds from ./api with its own Dockerfile/.dockerignore.
+api/node_modules

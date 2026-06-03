@@ -294,6 +294,13 @@ body:not(.can-edit) .edit-only{display:none!important}
       </ul>
     </div>
     <div class="sidebar-divider"></div>
+    <div class="sidebar-section">
+      <div class="sidebar-title" data-i18n="nav_systems">الأنظمة</div>
+      <ul class="sidebar-menu">
+        <li><a class="menu-item" href="/voices/"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg><span data-i18n="nav_library">مكتبة أصوات المستفيدين</span></a></li>
+      </ul>
+    </div>
+    <div class="sidebar-divider"></div>
     <div class="sidebar-section edit-only">
       <button class="btn-add-issue" id="addBtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M12 5v14M5 12h14"/></svg><span data-i18n="add_case">إضافة قضية</span></button>
     </div>
@@ -450,6 +457,7 @@ const I18N = {
     app_title:"Crisis Radar", app_subtitle:"Live perception & risk monitoring", org_name:"Misk Foundation",
     refresh:"Refresh", add_case:"Add case", login:"Login", exit_edit:"Exit editing",
     nav_main:"Main navigation", nav_dashboard:"Dashboard", nav_issues:"All cases", nav_radar:"Crisis Radar",
+    nav_systems:"Systems", nav_library:"Voice of Beneficiaries Library",
     dash_title:"Dashboard", dash_sub:"Overview of monitored crises and cases",
     stat_total:"Total Cases", stat_high:"High", stat_med:"Medium", stat_low:"Low", stat_esc:"Escalated",
     active_cases:"Active cases",
@@ -516,6 +524,7 @@ const I18N = {
     app_title:"رادار الأزمات", app_subtitle:"رصد حي للانطباع والمخاطر", org_name:"مؤسسة مسك",
     refresh:"تحديث", add_case:"إضافة قضية", login:"دخول", exit_edit:"خروج من التعديل",
     nav_main:"التنقل الرئيسي", nav_dashboard:"لوحة التحكم", nav_issues:"جميع القضايا", nav_radar:"رادار الأزمات",
+    nav_systems:"الأنظمة", nav_library:"مكتبة أصوات المستفيدين",
     dash_title:"لوحة التحكم", dash_sub:"نظرة عامة على حالة الأزمات والقضايا المراقبة حالياً",
     stat_total:"إجمالي الحالات", stat_high:"مرتفع", stat_med:"متوسط", stat_low:"منخفض", stat_esc:"مُصعّدة",
     active_cases:"القضايا النشطة",
@@ -1094,7 +1103,7 @@ document.getElementById("loginBtn").onclick=openLogin;
 document.getElementById("gateBtn").onclick=tryLogin;
 document.getElementById("gateInput").addEventListener("keydown",e=>{if(e.key==="Enter")tryLogin();});
 document.getElementById("navToggle").onclick=()=>document.getElementById("sidebar").classList.toggle("open");
-document.querySelectorAll(".menu-item").forEach(b=>b.addEventListener("click",()=>showView(b.dataset.view)));
+document.querySelectorAll(".menu-item[data-view]").forEach(b=>b.addEventListener("click",()=>showView(b.dataset.view)));
 [document.getElementById("issueModal"),document.getElementById("loginModal"),document.getElementById("emailModal")].forEach(o=>o.addEventListener("click",e=>{if(e.target===o)o.classList.remove("active");}));
 document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeForm();closeLogin();closeEmail();}});
 function start(){
