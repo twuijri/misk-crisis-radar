@@ -19,7 +19,10 @@ await esbuild.build({
   target: ["es2019"],
   loader: { ".js": "jsx", ".jsx": "jsx" },
   jsx: "automatic",
-  define: { "process.env.NODE_ENV": '"production"' },
+  define: {
+    "process.env.NODE_ENV": '"production"',
+    __APP_VERSION__: JSON.stringify(process.env.APP_VERSION || "dev"),
+  },
   outfile: `${outdir}/bundle.js`,
   logLevel: "info",
 });

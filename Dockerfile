@@ -4,11 +4,12 @@
 # (no CDN). Output lands in /voices/dist.
 # ---------------------------------------------------------------
 FROM node:20-alpine AS voices
+ARG APP_VERSION=dev
 WORKDIR /voices
 COPY voices/package.json ./
 RUN npm install
 COPY voices/ ./
-RUN npm run build
+RUN APP_VERSION="$APP_VERSION" npm run build
 
 # ---------------------------------------------------------------
 # Stage 2 — static web server.
@@ -18,6 +19,8 @@ RUN npm run build
 # straight into the web root (library served at /voices/).
 # ---------------------------------------------------------------
 FROM nginx:alpine
+ARG APP_VERSION=dev
+ENV APP_VERSION=$APP_VERSION
 COPY index.html /app/index.html
 COPY assets /usr/share/nginx/html/assets
 COPY --from=voices /voices/dist /usr/share/nginx/html/voices

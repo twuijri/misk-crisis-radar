@@ -16,7 +16,7 @@ const FONT_CSS = `
 @font-face{font-family:'IBM Plex Sans Arabic';font-style:normal;font-weight:600;font-display:swap;src:url('/assets/fonts/ibm-plex-sans-arabic-arabic-600.woff2') format('woff2');unicode-range:U+0600-06FF,U+0750-077F,U+0870-088E,U+0898-08E1,U+08E3-08FF,U+200C-200E,U+2010-2011,U+FB50-FDFF,U+FE70-FEFF}
 @font-face{font-family:'IBM Plex Sans Arabic';font-style:normal;font-weight:400;font-display:swap;src:url('/assets/fonts/ibm-plex-sans-arabic-arabic-400.woff2') format('woff2');unicode-range:U+0600-06FF,U+0750-077F,U+0870-088E,U+0898-08E1,U+08E3-08FF,U+200C-200E,U+2010-2011,U+FB50-FDFF,U+FE70-FEFF}`;
 
-const C = { green: "#0F3D30", greenDeep: "#0A2C22", lime: "#C4D600", teal: "#2DA188", tealSoft: "#7FCBB8", mist: "#F3F6F2", line: "#E1E8E2", muted: "#5E6E66", ink: "#13211C" };
+const C = { green: "#1B7D5C", greenDeep: "#146145", lime: "#C4D600", teal: "#2DB89F", tealSoft: "#9FD9CB", mist: "#F5F9F8", line: "#E8EDEB", muted: "#5A5A5A", ink: "#1B1B1B" };
 
 function LoginGate({ onAuthed }) {
   const [code, setCodeVal] = useState("");

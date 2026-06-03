@@ -16,20 +16,30 @@ import { kvGet, kvPut, aiComplete, aiGetConfig, aiPutConfig, brandGet, brandPut,
 
 const KEY = "vobl:data:v1";
 
+/* Build stamp injected at Docker build time (esbuild `define`).
+   Shared with the radar so both systems show the same version. */
+const APP_VERSION = typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : "dev";
+
+/* Palette aligned with the Crisis Radar identity (radar primary #1B7D5C,
+   teal #2DB89F, light #F5F9F8, border #E8EDEB) so the two systems read as
+   one product. The dark forest-green of the "Quote of the Week" panel and
+   the report/modal headers is preserved via the dedicated `quote` tokens. */
 const C = {
-  green: "#0F3D30",
-  greenDeep: "#0A2C22",
-  greenLine: "#1C5544",
+  green: "#1B7D5C",      // radar primary — headings, buttons, sidebar
+  greenDeep: "#146145",  // deeper primary for active/hover
+  greenLine: "#2E9476",  // hairline on the green sidebar
+  quote: "#0F3D30",      // dark forest-green panels (kept as-is)
+  quoteLine: "#0A2C22",  // chips inside the dark panels
   lime: "#C4D600",
   limeSoft: "#E4EE9A",
-  teal: "#2DA188",
-  tealSoft: "#7FCBB8",
-  ink: "#13211C",
+  teal: "#2DB89F",       // radar teal
+  tealSoft: "#9FD9CB",
+  ink: "#1B1B1B",
   paper: "#FFFFFF",
-  mist: "#F3F6F2",
+  mist: "#F5F9F8",       // radar light background
   card: "#FFFFFF",
-  line: "#E1E8E2",
-  muted: "#5E6E66",
+  line: "#E8EDEB",       // radar border
+  muted: "#5A5A5A",
   amber: "#B5852A",
   amberSoft: "#F6ECCF",
 };
@@ -507,8 +517,8 @@ export default function App({ onAuthExpired, onLogout }) {
   const isAr = lang === "ar";
   const dir = isAr ? "rtl" : "ltr";
   const fontStack = isAr
-    ? "'IBM Plex Sans Arabic', 'Segoe UI', Tahoma, sans-serif"
-    : "'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif";
+    ? "'IBM Plex Sans Arabic', 'DM Sans', 'Segoe UI', Tahoma, sans-serif"
+    : "'DM Sans', 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif";
 
   /* ---- load / persist ---- */
   useEffect(() => {
@@ -661,7 +671,8 @@ export default function App({ onAuthExpired, onLogout }) {
           })}
         </nav>
         <div style={{ padding: 14, borderTop: `1px solid ${C.greenLine}`, fontSize: 10.5, color: C.tealSoft }}>
-          {isAr ? "النسخة 1.0 · مستودع الأدلة" : "Version 1.0 · Evidence Repository"}
+          {isAr ? `النسخة ${APP_VERSION}` : `Version ${APP_VERSION}`}
+          <div style={{ marginTop: 2, opacity: 0.7 }}>{isAr ? "مستودع الأدلة" : "Evidence Repository"}</div>
         </div>
       </aside>
 
@@ -850,7 +861,7 @@ function Dashboard({ ctx, setView }) {
 
       <div style={{ display: "grid", gridTemplateColumns: "1.1fr 1fr", gap: 14 }}>
         {/* Quote of the week */}
-        <div style={{ background: C.green, borderRadius: 13, padding: 22, color: "#fff", position: "relative", overflow: "hidden" }}>
+        <div style={{ background: C.quote, borderRadius: 13, padding: 22, color: "#fff", position: "relative", overflow: "hidden" }}>
           <div style={{ position: "absolute", bottom: -10, [isAr ? "left" : "right"]: 16, display: "flex", gap: 6, opacity: 0.5 }}>
             {[0, 1, 2].map((i) => <div key={i} style={{ width: 14, height: 46, background: C.teal, borderRadius: 2 }} />)}
           </div>
@@ -868,7 +879,7 @@ function Dashboard({ ctx, setView }) {
               </div>
               <div style={{ display: "flex", gap: 6, marginTop: 12, flexWrap: "wrap" }}>
                 {qotw.themes.slice(0, 3).map((th) => (
-                  <span key={th} style={{ fontSize: 10.5, padding: "2px 8px", borderRadius: 20, background: C.greenDeep, color: C.tealSoft }}>{Lv(vocab.themes, th, lang)}</span>
+                  <span key={th} style={{ fontSize: 10.5, padding: "2px 8px", borderRadius: 20, background: C.quoteLine, color: C.tealSoft }}>{Lv(vocab.themes, th, lang)}</span>
                 ))}
               </div>
             </>
@@ -1378,7 +1389,7 @@ function ReportPreview({ built, vocab }) {
   return (
     <div id="vobl-print" dir={isAr ? "rtl" : "ltr"} style={{ background: "#fff", border: `1px solid ${C.line}`, borderRadius: 10, overflow: "hidden" }}>
       {/* cover band */}
-      <div style={{ background: C.green, color: "#fff", padding: "26px 30px", position: "relative", overflow: "hidden" }}>
+      <div style={{ background: C.quote, color: "#fff", padding: "26px 30px", position: "relative", overflow: "hidden" }}>
         <div style={{ position: "absolute", top: 0, [isAr ? "left" : "right"]: 0, width: 140, height: 70, background: `repeating-linear-gradient(115deg, ${C.lime} 0 9px, transparent 9px 20px)`, opacity: 0.9 }} />
         <div style={{ fontSize: 11, color: C.lime, fontWeight: 700, letterSpacing: 1 }}>{isAr ? "مؤسسة مسك · الاتصال الاستراتيجي" : "MISK FOUNDATION · STRATEGIC COMMUNICATIONS"}</div>
         <div style={{ fontSize: 23, fontWeight: 700, marginTop: 8 }}>{L("appName")}</div>
@@ -1446,7 +1457,7 @@ function ReportPreview({ built, vocab }) {
           <div>
             <div style={{ fontSize: 14, fontWeight: 700, color: C.green, marginBottom: 10 }}>{isAr ? "ملحق: قائمة المصادر" : "Appendix: Source Register"}</div>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11.5 }}>
-              <thead><tr style={{ background: C.green, color: "#fff" }}>
+              <thead><tr style={{ background: C.quote, color: "#fff" }}>
                 {[isAr ? "المصدر" : "Source", isAr ? "البرنامج" : "Program", isAr ? "التصنيف" : "Class.", isAr ? "النتيجة" : "Score"].map((h, i) => <th key={i} style={{ padding: "7px 9px", textAlign: isAr ? "right" : "left" }}>{h}</th>)}
               </tr></thead>
               <tbody>
@@ -1775,7 +1786,7 @@ function Drawer({ children, onClose, title, isAr }) {
     <div className="no-print" style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", justifyContent: isAr ? "flex-start" : "flex-end" }}>
       <div onClick={onClose} style={{ position: "absolute", inset: 0, background: "rgba(10,30,24,0.45)", backdropFilter: "blur(2px)" }} />
       <div className="vobl-drawer vobl-scroll" dir={isAr ? "rtl" : "ltr"} style={{ position: "relative", width: 520, maxWidth: "92vw", background: C.paper, height: "100%", overflowY: "auto", boxShadow: "0 0 40px rgba(0,0,0,0.2)" }}>
-        <div style={{ position: "sticky", top: 0, background: C.green, color: "#fff", padding: "16px 22px", display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 2 }}>
+        <div style={{ position: "sticky", top: 0, background: C.quote, color: "#fff", padding: "16px 22px", display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 2 }}>
           <span style={{ fontWeight: 700, fontSize: 15 }}>{title}</span>
           <button onClick={onClose} style={{ background: "none", border: "none", color: "#fff", cursor: "pointer" }}><X size={20} /></button>
         </div>
@@ -1790,7 +1801,8 @@ const AR_RANGE = "U+0600-06FF,U+0750-077F,U+0870-088E,U+0898-08E1,U+08E3-08FF,U+
 const fontFaceCss = [400, 500, 600, 700].map((w) => `
 @font-face{font-family:'IBM Plex Sans Arabic';font-style:normal;font-weight:${w};font-display:swap;src:url('/assets/fonts/ibm-plex-sans-arabic-arabic-${w}.woff2') format('woff2');unicode-range:${AR_RANGE}}
 @font-face{font-family:'IBM Plex Sans Arabic';font-style:normal;font-weight:${w};font-display:swap;src:url('/assets/fonts/ibm-plex-sans-arabic-latin-${w}.woff2') format('woff2')}
-@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:${w};font-display:swap;src:url('/assets/fonts/ibm-plex-sans-arabic-latin-${w}.woff2') format('woff2')}`).join("");
+@font-face{font-family:'IBM Plex Sans';font-style:normal;font-weight:${w};font-display:swap;src:url('/assets/fonts/ibm-plex-sans-arabic-latin-${w}.woff2') format('woff2')}
+@font-face{font-family:'DM Sans';font-style:normal;font-weight:${w};font-display:swap;src:url('/assets/fonts/dm-sans-latin-${w}.woff2') format('woff2')}`).join("");
 
 const baseCss = `
 ${fontFaceCss}
@@ -1803,8 +1815,8 @@ ${fontFaceCss}
 .vobl-scroll::-webkit-scrollbar-track { background: transparent; }
 .vobl-input { padding: 9px 11px; border: 1px solid ${C.line}; border-radius: 9px; font-family: inherit; font-size: 13px; color: ${C.ink}; background: #fff; outline: none; }
 .vobl-input:focus { border-color: ${C.teal}; box-shadow: 0 0 0 3px rgba(45,161,136,0.12); }
-.vobl-btn-primary { display: inline-flex; align-items: center; gap: 6px; padding: 9px 15px; background: ${C.green}; color: #fff; border: none; border-radius: 9px; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: background .15s; }
-.vobl-btn-primary:hover { background: ${C.greenDeep}; }
+.vobl-btn-primary { display: inline-flex; align-items: center; gap: 6px; padding: 9px 15px; background: linear-gradient(135deg, ${C.green}, ${C.teal}); color: #fff; border: none; border-radius: 9px; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: box-shadow .18s, transform .18s; }
+.vobl-btn-primary:hover { box-shadow: 0 4px 16px rgba(27,125,92,0.22); transform: translateY(-1px); }
 .vobl-btn-ghost { display: inline-flex; align-items: center; gap: 6px; padding: 9px 13px; background: #fff; color: ${C.green}; border: 1px solid ${C.line}; border-radius: 9px; font-family: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; transition: all .15s; }
 .vobl-btn-ghost:hover { border-color: ${C.teal}; background: ${C.mist}; }
 .vobl-btn-ai { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; background: ${C.amberSoft}; color: ${C.amber}; border: 1px dashed ${C.amber}; border-radius: 9px; font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
@@ -1817,7 +1829,7 @@ ${fontFaceCss}
 .vobl-pill { padding: 7px 13px; border: none; border-radius: 20px; font-family: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; transition: all .15s; }
 .vobl-nav:hover { background: ${C.greenDeep} !important; }
 .vobl-row { transition: box-shadow .15s, transform .15s; }
-.vobl-row:hover { box-shadow: 0 4px 16px rgba(15,61,48,0.08); }
+.vobl-row:hover { box-shadow: 0 4px 16px rgba(27,125,92,0.10); }
 @media print {
   .no-print { display: none !important; }
   body { background: #fff !important; }

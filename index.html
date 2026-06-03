@@ -366,7 +366,10 @@ body:not(.can-edit) .edit-only{display:none!important}
     <!-- DETAIL -->
     <section class="view" id="view-detail"></section>
 
-    <footer class="foot" data-i18n-html="footer"></footer>
+    <footer class="foot">
+      <span data-i18n-html="footer"></span>
+      <div style="margin-top:.5rem;font-size:.72rem;opacity:.75"><span data-i18n="version_label">Version</span> __APP_VERSION__</div>
+    </footer>
   </main>
 </div>
 
@@ -489,6 +492,7 @@ const I18N = {
     enter_editing:"Enter editing mode", login_needed:"Your editing session ended. Please log in again.",
     cfg_banner:'<b>Backend not reachable</b> — running in demo mode, nothing is saved. Check that the <code>api</code> service is running at <code>/api</code>.',
     footer:'<b>Misk · Crisis Radar</b> — shared team workspace. Scores roll up to a Low / Medium / High classification automatically.',
+    version_label:"Version",
     live_connecting:"Connecting…", live_synced:"Live · synced", live_error:"Connection error", live_demo:"Demo mode",
     portfolio_avg:"Portfolio average", score:"score", case:"case", cases:"cases", dashed_line:"dashed line",
     all:"All", team:"Team", loading:"Loading…", no_notes:"No monitoring notes yet.",
@@ -556,6 +560,7 @@ const I18N = {
     enter_editing:"الدخول لوضع التعديل", login_needed:"انتهت جلسة التعديل. يرجى تسجيل الدخول من جديد.",
     cfg_banner:'<b>تعذّر الوصول للخادم</b> — الصفحة تعمل بالوضع التجريبي ولا يُحفظ شيء. تأكد أن خدمة <code>api</code> تعمل على <code>/api</code>.',
     footer:'<b>مسك · رادار الأزمات</b> — مساحة عمل مشتركة للفريق. تُصنَّف النتائج تلقائيًا إلى منخفض / متوسط / مرتفع.',
+    version_label:"النسخة",
     live_connecting:"جارٍ الاتصال…", live_synced:"مباشر · متزامن", live_error:"خطأ في الاتصال", live_demo:"وضع تجريبي",
     portfolio_avg:"متوسط المحفظة", score:"النتيجة", case:"قضية", cases:"قضايا", dashed_line:"خط متقطع",
     all:"الكل", team:"الفريق", loading:"جارٍ التحميل…", no_notes:"لا توجد ملاحظات رصد بعد.",
