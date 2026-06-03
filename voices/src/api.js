@@ -84,3 +84,11 @@ export async function aiComplete(system, prompt, maxTokens) {
   });
   return (out && out.text) || "";
 }
+
+/* Shared branding (logo) — used by both the radar and the library. */
+export function brandGet() {
+  return request("/brand");
+}
+export function brandPut(logo) {
+  return request("/brand", { method: "PUT", body: JSON.stringify({ logo }) });
+}

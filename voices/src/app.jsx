@@ -6,7 +6,7 @@ import {
   ShieldCheck, AlertCircle, Loader2, Users, Layers, Building2, Link2, Printer,
   LogOut, KeyRound, Server, ArrowLeft
 } from "lucide-react";
-import { kvGet, kvPut, aiComplete, aiGetConfig, aiPutConfig, clearCode } from "./api.js";
+import { kvGet, kvPut, aiComplete, aiGetConfig, aiPutConfig, brandGet, brandPut, clearCode } from "./api.js";
 
 /* ============================================================
    Voice of Beneficiaries Library  ·  مكتبة أصوات المستفيدين
@@ -144,6 +144,12 @@ const UI = {
   aiTest: { ar: "اختبار الاتصال", en: "Test connection" },
   aiTestOk: { ar: "نجح الاتصال", en: "Connection OK" },
   aiTestFail: { ar: "فشل الاتصال", en: "Connection failed" },
+  brand: { ar: "الشعار", en: "Logo" },
+  brandSub: { ar: "يُطبَّق الشعار على النظامين (المكتبة ورادار الأزمات). يُفضَّل صورة مربعة بخلفية شفافة.", en: "Applies to both systems (Library & Crisis Radar). A square image with a transparent background works best." },
+  brandUpload: { ar: "رفع شعار", en: "Upload logo" },
+  brandRemove: { ar: "إزالة الشعار", en: "Remove logo" },
+  brandSaved: { ar: "تم تحديث الشعار", en: "Logo updated" },
+  brandNone: { ar: "لا يوجد شعار مخصص — يظهر الشعار الافتراضي", en: "No custom logo — the default mark is shown" },
 };
 
 /* ---------------------- controlled vocabularies ---------------------- */
@@ -490,7 +496,12 @@ export default function App({ onAuthExpired, onLogout }) {
   const [view, setView] = useState("dashboard");
   const [editing, setEditing] = useState(null);     // quote object or null
   const [editingAsset, setEditingAsset] = useState(null);
+  const [brandLogo, setBrandLogo] = useState(null); // shared logo data URL or null
   const loadedRef = useRef(false);
+
+  useEffect(() => {
+    brandGet().then((b) => setBrandLogo((b && b.logo) || null)).catch(() => {});
+  }, []);
 
   const t = (k) => (UI[k] ? UI[k][lang] : k);
   const isAr = lang === "ar";
@@ -619,17 +630,18 @@ export default function App({ onAuthExpired, onLogout }) {
   const ctx = { data, lang, t, isAr, scored, vocab, config, quotes, archive, insights, considerations,
     setQuotes, setArchive, setInsights, setConsiderations, setConfig,
     saveQuote, removeQuote, saveAsset, removeAsset, setEditing, setEditingAsset,
-    callClaude, exportJson, exportCsv, importJson, resetData };
+    callClaude, exportJson, exportCsv, importJson, resetData,
+    brandLogo, setBrandLogo };
 
   return (
-    <div dir={dir} style={{ fontFamily: fontStack, background: C.mist, color: C.ink, minHeight: 600, display: "flex", borderRadius: 14, overflow: "hidden", border: `1px solid ${C.line}` }}>
+    <div dir={dir} style={{ fontFamily: fontStack, background: C.mist, color: C.ink, height: "100vh", display: "flex", overflow: "hidden" }}>
       <style>{baseCss}</style>
 
       {/* Sidebar */}
       <aside className="no-print" style={{ width: 248, background: C.green, color: "#fff", display: "flex", flexDirection: "column", flexShrink: 0 }}>
         <div style={{ position: "relative", padding: "20px 18px 18px", borderBottom: `1px solid ${C.greenLine}`, overflow: "hidden" }}>
           <div style={{ position: "absolute", top: 0, [isAr ? "left" : "right"]: 0, width: 90, height: 60, background: `repeating-linear-gradient(115deg, ${C.lime} 0 7px, transparent 7px 16px)`, opacity: 0.85, transform: isAr ? "scaleX(-1)" : "none" }} />
-          <LogoMark />
+          <LogoMark logo={brandLogo} />
           <div style={{ fontWeight: 700, fontSize: 15, marginTop: 12, lineHeight: 1.3 }}>{t("appName")}</div>
           <div style={{ fontSize: 11, color: C.tealSoft, marginTop: 3 }}>{t("appSub")}</div>
         </div>
@@ -654,7 +666,7 @@ export default function App({ onAuthExpired, onLogout }) {
       </aside>
 
       {/* Main */}
-      <main style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", maxHeight: 760, overflow: "hidden" }}>
+      <main style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden" }}>
         {/* Topbar */}
         <header className="no-print" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "14px 22px", background: C.paper, borderBottom: `1px solid ${C.line}` }}>
           <div>
@@ -702,7 +714,10 @@ export default function App({ onAuthExpired, onLogout }) {
 }
 
 /* ---------------------- Logo mark (abstract growth canopy) ---------------------- */
-function LogoMark() {
+function LogoMark({ logo }) {
+  if (logo) {
+    return <img src={logo} alt="" style={{ width: 42, height: 42, objectFit: "contain", borderRadius: 9, background: "#fff", padding: 3, position: "relative" }} />;
+  }
   const dots = [[18, 6], [11, 11], [25, 11], [7, 18], [18, 14], [29, 18], [13, 22], [23, 22], [18, 20]];
   return (
     <svg width="40" height="40" viewBox="0 0 36 40" aria-hidden>
@@ -1572,9 +1587,100 @@ function SettingsView({ ctx }) {
       </Card>
 
       <div style={{ gridColumn: "1 / -1" }}>
+        <BrandCard ctx={ctx} />
+      </div>
+      <div style={{ gridColumn: "1 / -1" }}>
         <AiConfigCard ctx={ctx} />
       </div>
     </div>
+  );
+}
+
+/* ---------------------- Shared logo (both systems) ---------------------- */
+// Downscale any uploaded image to a small square PNG data URL so it stays
+// well under the request limit and loads fast on both pages.
+function fileToLogoDataUrl(file, max = 240) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, max / Math.max(img.width, img.height));
+        const w = Math.max(1, Math.round(img.width * scale));
+        const h = Math.max(1, Math.round(img.height * scale));
+        const canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        const cx = canvas.getContext("2d");
+        cx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL("image/png"));
+      };
+      img.onerror = reject;
+      img.src = reader.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function BrandCard({ ctx }) {
+  const { t, isAr, brandLogo, setBrandLogo } = ctx;
+  const fileRef = useRef();
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState(null);
+
+  const onFile = async (file) => {
+    if (!file) return;
+    setBusy(true); setMsg(null);
+    try {
+      const dataUrl = await fileToLogoDataUrl(file);
+      const out = await brandPut(dataUrl);
+      setBrandLogo(out.logo || null);
+      setMsg({ kind: "ok", text: t("brandSaved") });
+    } catch (e) {
+      setMsg({ kind: "err", text: e.message || "error" });
+    }
+    setBusy(false);
+  };
+  const remove = async () => {
+    setBusy(true); setMsg(null);
+    try {
+      await brandPut("");
+      setBrandLogo(null);
+      setMsg({ kind: "ok", text: t("brandSaved") });
+    } catch (e) {
+      setMsg({ kind: "err", text: e.message || "error" });
+    }
+    setBusy(false);
+  };
+
+  return (
+    <Card style={{ padding: 18 }}>
+      <SectionTitle icon={Sparkles} sub={t("brandSub")}>{t("brand")}</SectionTitle>
+      <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+        <div style={{ width: 72, height: 72, borderRadius: 14, border: `1px solid ${C.line}`, background: brandLogo ? "#fff" : C.green, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, overflow: "hidden" }}>
+          {brandLogo
+            ? <img src={brandLogo} alt="" style={{ width: "100%", height: "100%", objectFit: "contain", padding: 6, boxSizing: "border-box" }} />
+            : <LogoMark />}
+        </div>
+        <div style={{ flex: 1, minWidth: 200 }}>
+          <div style={{ display: "flex", gap: 9, flexWrap: "wrap" }}>
+            <button onClick={() => fileRef.current?.click()} disabled={busy} className="vobl-btn-primary">
+              {busy ? <Loader2 size={14} className="vobl-spin" /> : <Upload size={15} />} {t("brandUpload")}
+            </button>
+            {brandLogo && (
+              <button onClick={remove} disabled={busy} className="vobl-btn-ghost" style={{ color: "#B33", borderColor: "#F0D0D0" }}>
+                <Trash2 size={15} /> {t("brandRemove")}
+              </button>
+            )}
+            <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }}
+              onChange={(e) => { const f = e.target.files[0]; e.target.value = ""; onFile(f); }} />
+          </div>
+          <div style={{ fontSize: 11.5, marginTop: 8, color: msg ? (msg.kind === "ok" ? C.teal : "#B33") : C.muted }}>
+            {msg ? msg.text : (brandLogo ? "" : t("brandNone"))}
+          </div>
+        </div>
+      </div>
+    </Card>
   );
 }
 

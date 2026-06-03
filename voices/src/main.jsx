@@ -91,10 +91,8 @@ function Root() {
 
   if (!authed) return <LoginGate onAuthed={() => setAuthed(true)} />;
   return (
-    <div style={{ minHeight: "100vh", background: C.mist, padding: 18, boxSizing: "border-box" }}>
-      <div style={{ maxWidth: 1180, margin: "0 auto" }}>
-        <App onLogout={logout} onAuthExpired={authExpired} />
-      </div>
+    <div style={{ minHeight: "100vh", background: C.mist }}>
+      <App onLogout={logout} onAuthExpired={authExpired} />
     </div>
   );
 }

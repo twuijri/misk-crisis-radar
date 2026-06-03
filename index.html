@@ -1106,9 +1106,18 @@ document.getElementById("navToggle").onclick=()=>document.getElementById("sideba
 document.querySelectorAll(".menu-item[data-view]").forEach(b=>b.addEventListener("click",()=>showView(b.dataset.view)));
 [document.getElementById("issueModal"),document.getElementById("loginModal"),document.getElementById("emailModal")].forEach(o=>o.addEventListener("click",e=>{if(e.target===o)o.classList.remove("active");}));
 document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeForm();closeLogin();closeEmail();}});
+async function loadBrand(){
+  try{
+    const r=await fetch(API_BASE+"/brand");
+    if(!r.ok) return;
+    const b=await r.json();
+    const img=document.getElementById("miskLogo");
+    if(img && b && b.logo){ img.style.display=""; img.src=b.logo; }
+  }catch(e){}
+}
 function start(){
   if(EDIT_CODE){ editMode=true; document.body.classList.add("can-edit"); }
-  updateLoginBtn(); buildFilters(); loadCases(); initRealtime();
+  updateLoginBtn(); buildFilters(); loadBrand(); loadCases(); initRealtime();
   if(!configured) setLive(false,"live_demo");
 }
 applyLang();

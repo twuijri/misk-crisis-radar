@@ -142,7 +142,8 @@ function asyncRoute(fn) {
    App
    ------------------------------------------------------------ */
 const app = express();
-app.use(express.json({ limit: "256kb" }));
+// 1mb leaves room for a small base64 logo data URL (downscaled client-side).
+app.use(express.json({ limit: "1mb" }));
 
 const WRITE_METHODS = ["POST", "PATCH", "PUT", "DELETE"];
 
@@ -239,13 +240,15 @@ r.post("/cases/:id/notes", asyncRoute(async (req, res) => {
    dedicated /ai/config route, never raw).
    ------------------------------------------------------------ */
 const AI_CONFIG_KEY = "__ai_config__";
+const BRAND_KEY = "__brand__";
+const RESERVED_KEYS = [AI_CONFIG_KEY, BRAND_KEY];
 function validKvKey(k) {
   return typeof k === "string" && /^[A-Za-z0-9:_-]{1,120}$/.test(k);
 }
 
 r.get("/kv/:key", asyncRoute(async (req, res) => {
   const key = req.params.key;
-  if (!validKvKey(key) || key === AI_CONFIG_KEY) return res.status(400).json({ error: "invalid key" });
+  if (!validKvKey(key) || RESERVED_KEYS.includes(key)) return res.status(400).json({ error: "invalid key" });
   const { rows } = await pool.query("SELECT value FROM kv_store WHERE key = $1", [key]);
   if (rows.length === 0) return res.json({ value: null });
   res.json({ value: rows[0].value });
@@ -253,7 +256,7 @@ r.get("/kv/:key", asyncRoute(async (req, res) => {
 
 r.put("/kv/:key", asyncRoute(async (req, res) => {
   const key = req.params.key;
-  if (!validKvKey(key) || key === AI_CONFIG_KEY) return res.status(400).json({ error: "invalid key" });
+  if (!validKvKey(key) || RESERVED_KEYS.includes(key)) return res.status(400).json({ error: "invalid key" });
   const value = req.body && req.body.value !== undefined ? req.body.value : req.body;
   await pool.query(
     `INSERT INTO kv_store (key, value, updated_at) VALUES ($1, $2, now())
@@ -261,6 +264,27 @@ r.put("/kv/:key", asyncRoute(async (req, res) => {
     [key, value]
   );
   res.json({ ok: true });
+}));
+
+/* ------------------------------------------------------------
+   Shared branding. The logo is read by BOTH the public Crisis Radar
+   page and the private library, so GET is public; only an editor (with
+   the access code) may change it via PUT. Stored as a small data URL.
+   ------------------------------------------------------------ */
+r.get("/brand", asyncRoute(async (req, res) => {
+  const { rows } = await pool.query("SELECT value FROM kv_store WHERE key = $1", [BRAND_KEY]);
+  res.json((rows[0] && rows[0].value) || { logo: null });
+}));
+
+r.put("/brand", asyncRoute(async (req, res) => {
+  const logo =
+    req.body && typeof req.body.logo === "string" && req.body.logo.trim() ? req.body.logo : null;
+  await pool.query(
+    `INSERT INTO kv_store (key, value, updated_at) VALUES ($1, $2, now())
+     ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`,
+    [BRAND_KEY, { logo }]
+  );
+  res.json({ logo });
 }));
 
 /* ------------------------------------------------------------
