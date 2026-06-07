@@ -4,8 +4,10 @@ import {
   Plus, Search, Download, Upload, Settings, X, Check, CheckCheck, Sparkles,
   Star, TrendingUp, TrendingDown, Minus, Globe, Trash2, Pencil, Filter,
   ShieldCheck, AlertCircle, Loader2, Users, Layers, Building2, Link2, Printer,
-  LogOut, KeyRound, Server, ArrowLeft
+  LogOut, KeyRound, Server, ArrowLeft, ChevronDown, FileDown, SlidersHorizontal
 } from "lucide-react";
+import { jsPDF } from "jspdf";
+import html2canvas from "html2canvas";
 import { kvGet, kvPut, aiComplete, aiGetConfig, aiPutConfig, brandGet, brandPut, clearCode } from "./api.js";
 
 /* ============================================================
@@ -160,6 +162,26 @@ const UI = {
   brandRemove: { ar: "إزالة الشعار", en: "Remove logo" },
   brandSaved: { ar: "تم تحديث الشعار", en: "Logo updated" },
   brandNone: { ar: "لا يوجد شعار مخصص — يظهر الشعار الافتراضي", en: "No custom logo — the default mark is shown" },
+  addOption: { ar: "إضافة خيار جديد", en: "Add new option" },
+  optionAr: { ar: "الاسم بالعربية", en: "Name (Arabic)" },
+  optionEn: { ar: "الاسم بالإنجليزية", en: "Name (English)" },
+  add: { ar: "إضافة", en: "Add" },
+  manageList: { ar: "تعديل القائمة", en: "Edit list" },
+  reportSections: { ar: "أقسام التقرير", en: "Report sections" },
+  editContent: { ar: "تحرير النص", en: "Edit text" },
+  doneEditing: { ar: "إنهاء التحرير", en: "Done editing" },
+  secMetrics: { ar: "لمحة المؤشرات", en: "Metrics snapshot" },
+  secQuotes: { ar: "الاقتباسات المختارة", en: "Curated quotes" },
+  secThemes: { ar: "أكثر الموضوعات", en: "Top themes" },
+  secInsights: { ar: "الرؤى الاستراتيجية", en: "Strategic insights" },
+  secConsiderations: { ar: "الاعتبارات الاستراتيجية", en: "Strategic considerations" },
+  secAppendix: { ar: "ملحق المصادر", en: "Source appendix" },
+  secIntro: { ar: "تمهيد تنفيذي", en: "Executive intro" },
+  introPlaceholder: { ar: "اكتب تمهيداً اختيارياً يظهر أعلى التقرير…", en: "Optional intro paragraph shown at the top of the report…" },
+  preparingPdf: { ar: "جاري تجهيز ملف PDF…", en: "Preparing PDF…" },
+  editHint: { ar: "يمكنك تعديل أي نص في التقرير مباشرة قبل التصدير.", en: "You can edit any text in the report directly before exporting." },
+  copyHtml: { ar: "نسخ كبريد منسّق", en: "Copy as formatted email" },
+  copied: { ar: "تم النسخ", en: "Copied" },
 };
 
 /* ---------------------- controlled vocabularies ---------------------- */
@@ -569,6 +591,7 @@ export default function App({ onAuthExpired, onLogout }) {
   const setInsights = (fn) => setData((d) => ({ ...d, insights: typeof fn === "function" ? fn(d.insights) : fn }));
   const setConsiderations = (fn) => setData((d) => ({ ...d, considerations: typeof fn === "function" ? fn(d.considerations) : fn }));
   const setConfig = (fn) => setData((d) => ({ ...d, config: typeof fn === "function" ? fn(d.config) : fn }));
+  const mutateVocab = (listName, fn) => setData((d) => ({ ...d, vocab: { ...d.vocab, [listName]: fn(d.vocab[listName] || []) } }));
 
   const saveQuote = (q) => {
     setQuotes((list) => {
@@ -597,7 +620,7 @@ export default function App({ onAuthExpired, onLogout }) {
   };
   const exportJson = () => download("voice-of-beneficiaries.json", JSON.stringify(data, null, 2));
   const exportCsv = () => {
-    const cols = ["id", "originalLanguage", "quote_ar", "quote_en", "translationSource", "sourceName_ar", "sourceName_en", "sourceType", "sourceSubtype", "entity", "program", "track", "themes", "priority", "impactLevel", "engagementLevel", "classification", "status", "score", "date", "link"];
+    const cols = ["id", "originalLanguage", "quote_ar", "quote_en", "translationSource", "sourceName_ar", "sourceName_en", "sourceType", "sourceSubtype", "entity", "program", "track", "themes", "impactLevel", "engagementLevel", "classification", "status", "score", "date", "link"];
     const esc = (v) => '"' + String(v ?? "").replace(/"/g, '""').replace(/\n/g, " ") + '"';
     const rows = scored.map((q) => cols.map((c) => esc(c === "themes" ? q.themes.join("|") : c === "score" ? q._score : q[c])).join(","));
     download("voice-of-beneficiaries-quotes.csv", [cols.join(","), ...rows].join("\n"), "text/csv");
@@ -638,7 +661,7 @@ export default function App({ onAuthExpired, onLogout }) {
   ];
 
   const ctx = { data, lang, t, isAr, scored, vocab, config, quotes, archive, insights, considerations,
-    setQuotes, setArchive, setInsights, setConsiderations, setConfig,
+    setQuotes, setArchive, setInsights, setConsiderations, setConfig, mutateVocab,
     saveQuote, removeQuote, saveAsset, removeAsset, setEditing, setEditingAsset,
     callClaude, exportJson, exportCsv, importJson, resetData,
     brandLogo, setBrandLogo };
@@ -790,14 +813,168 @@ function Bar({ label, value, max, color }) {
     </div>
   );
 }
+const firstKey = (list, fallback) => (list && list[0] ? list[0].k : fallback);
 const blankQuote = (vocab) => ({
   id: uid(), originalLanguage: "ar", quote_ar: "", quote_en: "", translationSource: "human",
-  sourceName_ar: "", sourceName_en: "", sourceType: "beneficiary", sourceSubtype: "",
-  entity: vocab.entities[0].k, program: vocab.programs[0].k, track: vocab.tracks[0].k,
-  themes: [], priority: vocab.priorities[0].k, strategicValue_ar: "", strategicValue_en: "",
+  sourceName_ar: "", sourceName_en: "", sourceType: firstKey(vocab.sourceTypes, "beneficiary"), sourceSubtype: "",
+  entity: firstKey(vocab.entities), program: firstKey(vocab.programs), track: firstKey(vocab.tracks),
+  themes: [],
   date: new Date().toISOString().slice(0, 10), link: "",
   impactLevel: "Medium", engagementLevel: "Medium", classification: "Medium", notes: "", status: "Draft",
 });
+
+/* ---------------------- editable form atoms (module-level so inputs keep focus) ----
+   Defining these inside a component body recreates them on every keystroke, which
+   remounts their inputs and drops focus — so they live at module scope. */
+function EditorField({ label, children }) {
+  return (
+    <div style={{ marginBottom: 13 }}>
+      <label style={{ fontSize: 12, fontWeight: 600, color: C.green, display: "block", marginBottom: 5 }}>{label}</label>
+      {children}
+    </div>
+  );
+}
+function LevelSelect({ value, onChange, t }) {
+  return (
+    <select value={value} onChange={(e) => onChange(e.target.value)} className="vobl-input" style={{ width: "100%" }}>
+      {["High", "Medium", "Low"].map((x) => <option key={x} value={x}>{t(x)}</option>)}
+    </select>
+  );
+}
+
+/* A select-style dropdown backed by an editable controlled vocabulary. Users pick
+   an option, add a new one (Arabic + English) inline, or toggle an edit mode to
+   delete options. Vocabulary edits persist through ctx.mutateVocab → data autosave. */
+function EditableSelect({ value, onChange, list, listName, mutateVocab, lang, isAr, t, placeholder }) {
+  const [open, setOpen] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [manage, setManage] = useState(false);
+  const [ar, setAr] = useState("");
+  const [en, setEn] = useState("");
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) { setOpen(false); setAdding(false); setManage(false); } };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [open]);
+
+  const current = list.find((o) => o.k === value);
+  const label = current ? current[lang] : (placeholder || "—");
+
+  const confirmAdd = () => {
+    const a = ar.trim(), e = en.trim();
+    if (!a && !e) return;
+    const k = "u_" + uid();
+    mutateVocab(listName, (arr) => [...arr, { k, ar: a || e, en: e || a }]);
+    onChange(k);
+    setAr(""); setEn(""); setAdding(false); setOpen(false);
+  };
+  const del = (k) => {
+    if (list.length <= 1) return;
+    const remaining = list.filter((o) => o.k !== k);
+    mutateVocab(listName, () => remaining);
+    if (value === k) onChange(remaining[0] ? remaining[0].k : "");
+  };
+
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <button type="button" onClick={() => setOpen((o) => !o)} className="vobl-input"
+        style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", background: "#fff", textAlign: isAr ? "right" : "left" }}>
+        <span style={{ color: current ? C.ink : C.muted }}>{label}</span>
+        <ChevronDown size={15} style={{ color: C.muted, flexShrink: 0 }} />
+      </button>
+      {open && (
+        <div style={{ position: "absolute", zIndex: 30, top: "calc(100% + 4px)", insetInlineStart: 0, width: "100%", background: "#fff", border: `1px solid ${C.line}`, borderRadius: 9, boxShadow: "0 10px 30px rgba(0,0,0,0.14)", maxHeight: 280, overflowY: "auto", padding: 5 }}>
+          {list.map((o) => (
+            <div key={o.k} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <button type="button" onClick={() => { onChange(o.k); setOpen(false); }}
+                style={{ flex: 1, textAlign: isAr ? "right" : "left", padding: "8px 10px", border: "none", background: o.k === value ? C.mist : "transparent", borderRadius: 7, cursor: "pointer", fontFamily: "inherit", fontSize: 13, color: C.ink, display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ flex: 1 }}>{o[lang]}</span>
+                {o.k === value && <Check size={13} style={{ color: C.teal }} />}
+              </button>
+              {manage && list.length > 1 && (
+                <button type="button" onClick={() => del(o.k)} title={t("delete")}
+                  style={{ padding: 6, border: "none", background: "transparent", color: "#B33", cursor: "pointer", borderRadius: 6 }}><Trash2 size={14} /></button>
+              )}
+            </div>
+          ))}
+          <div style={{ borderTop: `1px solid ${C.line}`, marginTop: 5, paddingTop: 5 }}>
+            {adding ? (
+              <div style={{ padding: 6, display: "flex", flexDirection: "column", gap: 6 }}>
+                <input autoFocus value={ar} onChange={(e) => setAr(e.target.value)} dir="rtl" placeholder={t("optionAr")} className="vobl-input" style={{ width: "100%" }} />
+                <input value={en} onChange={(e) => setEn(e.target.value)} dir="ltr" placeholder={t("optionEn")} className="vobl-input" style={{ width: "100%" }} />
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button type="button" onClick={confirmAdd} className="vobl-btn-primary" style={{ flex: 1, justifyContent: "center" }}><Check size={14} /> {t("add")}</button>
+                  <button type="button" onClick={() => { setAdding(false); setAr(""); setEn(""); }} className="vobl-btn-ghost">{t("cancel")}</button>
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: "flex", gap: 4 }}>
+                <button type="button" onClick={() => { setAdding(true); setManage(false); }}
+                  style={{ flex: 1, display: "flex", alignItems: "center", gap: 6, padding: "8px 10px", border: "none", background: "transparent", color: C.green, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", fontSize: 12.5 }}>
+                  <Plus size={14} /> {t("addOption")}
+                </button>
+                <button type="button" onClick={() => setManage((m) => !m)} title={t("manageList")}
+                  style={{ display: "flex", alignItems: "center", gap: 5, padding: "8px 10px", border: "none", background: manage ? C.mist : "transparent", color: manage ? C.teal : C.muted, cursor: "pointer", fontFamily: "inherit", fontSize: 12.5, borderRadius: 7 }}>
+                  <Pencil size={13} />
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* Editable, multi-select theme picker (chips). Add/delete persists to vocab. */
+function ThemeEditor({ themes, selected, toggle, mutateVocab, lang, t }) {
+  const [adding, setAdding] = useState(false);
+  const [manage, setManage] = useState(false);
+  const [ar, setAr] = useState("");
+  const [en, setEn] = useState("");
+  const add = () => {
+    const a = ar.trim(), e = en.trim();
+    if (!a && !e) return;
+    const k = "u_" + uid();
+    mutateVocab("themes", (arr) => [...arr, { k, ar: a || e, en: e || a }]);
+    toggle(k);
+    setAr(""); setEn(""); setAdding(false);
+  };
+  const del = (k) => mutateVocab("themes", (arr) => arr.filter((o) => o.k !== k));
+  return (
+    <div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
+        {themes.map((th) => {
+          const on = selected.includes(th.k);
+          return (
+            <span key={th.k} style={{ display: "inline-flex", alignItems: "center", gap: 2 }}>
+              <button type="button" onClick={() => toggle(th.k)} className="vobl-pill"
+                style={{ background: on ? C.teal : C.mist, color: on ? "#fff" : C.ink, fontSize: 11.5 }}>{th[lang]}</button>
+              {manage && themes.length > 1 && (
+                <button type="button" onClick={() => del(th.k)} title={t("delete")}
+                  style={{ marginInlineStart: -2, border: "none", background: "transparent", color: "#B33", cursor: "pointer", padding: 2, display: "inline-flex" }}><X size={13} /></button>
+              )}
+            </span>
+          );
+        })}
+        <button type="button" onClick={() => { setAdding((a) => !a); setManage(false); }} className="vobl-pill"
+          style={{ background: "#fff", color: C.green, border: `1px dashed ${C.line}`, fontSize: 11.5, display: "inline-flex", gap: 4, alignItems: "center" }}><Plus size={12} /> {t("add")}</button>
+        <button type="button" onClick={() => { setManage((m) => !m); setAdding(false); }} className="vobl-pill"
+          style={{ background: manage ? C.mist : "transparent", color: manage ? C.teal : C.muted, fontSize: 11.5, display: "inline-flex", gap: 4, alignItems: "center" }}><Pencil size={11} /></button>
+      </div>
+      {adding && (
+        <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
+          <input autoFocus value={ar} onChange={(e) => setAr(e.target.value)} dir="rtl" placeholder={t("optionAr")} className="vobl-input" style={{ flex: 1, minWidth: 130 }} />
+          <input value={en} onChange={(e) => setEn(e.target.value)} dir="ltr" placeholder={t("optionEn")} className="vobl-input" style={{ flex: 1, minWidth: 130 }} />
+          <button type="button" onClick={add} className="vobl-btn-primary"><Check size={14} /></button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 /* ---------------------- frequency util ---------------------- */
 function freqBy(items, keyFn) {
@@ -840,7 +1017,7 @@ function Dashboard({ ctx, setView }) {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 16 }}>
         {kpis.map((k, i) => (
           <Card key={i} style={{ padding: 16, position: "relative", overflow: "hidden" }}>
-            <div style={{ position: "absolute", top: 0, [isAr ? "left" : "right"]: 0, width: 4, top: 0, bottom: 0, background: k.color, opacity: 0.85 }} />
+            <div style={{ position: "absolute", [isAr ? "left" : "right"]: 0, width: 4, top: 0, bottom: 0, background: k.color, opacity: 0.85 }} />
             <k.icon size={18} style={{ color: k.color }} />
             <div style={{ fontSize: 28, fontWeight: 700, color: C.green, marginTop: 8, lineHeight: 1 }}>{k.value}</div>
             <div style={{ fontSize: 12, color: C.muted, marginTop: 6 }}>{k.label}</div>
@@ -1005,7 +1182,7 @@ function Library({ ctx }) {
 /* ======================================================================== */
 /* QUOTE EDITOR */
 function QuoteEditor({ ctx, quote, onSave, onDelete, onClose }) {
-  const { vocab, lang, t, isAr, callClaude, config } = ctx;
+  const { vocab, lang, t, isAr, callClaude, config, mutateVocab } = ctx;
   const [f, setF] = useState({ ...quote });
   const [aiBusy, setAiBusy] = useState("");
   const [aiErr, setAiErr] = useState(false);
@@ -1043,22 +1220,7 @@ function QuoteEditor({ ctx, quote, onSave, onDelete, onClose }) {
     setAiBusy("");
   };
 
-  const Field = ({ label, children }) => (
-    <div style={{ marginBottom: 13 }}>
-      <label style={{ fontSize: 12, fontWeight: 600, color: C.green, display: "block", marginBottom: 5 }}>{label}</label>
-      {children}
-    </div>
-  );
-  const Sel = ({ k, list }) => (
-    <select value={f[k]} onChange={(e) => set(k, e.target.value)} className="vobl-input" style={{ width: "100%" }}>
-      {list.map((o) => <option key={o.k} value={o.k}>{o[lang]}</option>)}
-    </select>
-  );
-  const LevelSel = ({ k }) => (
-    <select value={f[k]} onChange={(e) => set(k, e.target.value)} className="vobl-input" style={{ width: "100%" }}>
-      {["High", "Medium", "Low"].map((x) => <option key={x} value={x}>{t(x)}</option>)}
-    </select>
-  );
+  const Field = EditorField;
 
   return (
     <Drawer onClose={onClose} isAr={isAr} title={quote.quote_ar || quote.quote_en ? t("edit") : t("addQuote")}>
@@ -1097,33 +1259,26 @@ function QuoteEditor({ ctx, quote, onSave, onDelete, onClose }) {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
         <Field label={t("source") + " (ع)"}><input value={f.sourceName_ar} onChange={(e) => set("sourceName_ar", e.target.value)} dir="rtl" className="vobl-input" style={{ width: "100%" }} /></Field>
         <Field label={t("source") + " (EN)"}><input value={f.sourceName_en} onChange={(e) => set("sourceName_en", e.target.value)} dir="ltr" className="vobl-input" style={{ width: "100%" }} /></Field>
-        <Field label={t("sourceType")}><Sel k="sourceType" list={vocab.sourceTypes} /></Field>
+        <Field label={t("sourceType")}>
+          <EditableSelect value={f.sourceType} onChange={(v) => set("sourceType", v)} list={vocab.sourceTypes} listName="sourceTypes" mutateVocab={mutateVocab} lang={lang} isAr={isAr} t={t} placeholder="—" />
+        </Field>
         {f.sourceType === "internal_evidence"
-          ? <Field label={t("sourceSubtype")}><Sel k="sourceSubtype" list={vocab.internalKinds} /></Field>
-          : <Field label={t("entity")}><Sel k="entity" list={vocab.entities} /></Field>}
-        {f.sourceType === "internal_evidence" && <Field label={t("entity")}><Sel k="entity" list={vocab.entities} /></Field>}
-        <Field label={t("program")}><Sel k="program" list={vocab.programs} /></Field>
-        <Field label={t("track")}><Sel k="track" list={vocab.tracks} /></Field>
-        <Field label={t("priority")}><Sel k="priority" list={vocab.priorities} /></Field>
+          ? <Field label={t("sourceSubtype")}><EditableSelect value={f.sourceSubtype} onChange={(v) => set("sourceSubtype", v)} list={vocab.internalKinds} listName="internalKinds" mutateVocab={mutateVocab} lang={lang} isAr={isAr} t={t} placeholder="—" /></Field>
+          : <Field label={t("entity")}><EditableSelect value={f.entity} onChange={(v) => set("entity", v)} list={vocab.entities} listName="entities" mutateVocab={mutateVocab} lang={lang} isAr={isAr} t={t} placeholder="—" /></Field>}
+        {f.sourceType === "internal_evidence" && <Field label={t("entity")}><EditableSelect value={f.entity} onChange={(v) => set("entity", v)} list={vocab.entities} listName="entities" mutateVocab={mutateVocab} lang={lang} isAr={isAr} t={t} placeholder="—" /></Field>}
+        <Field label={t("program")}><EditableSelect value={f.program} onChange={(v) => set("program", v)} list={vocab.programs} listName="programs" mutateVocab={mutateVocab} lang={lang} isAr={isAr} t={t} placeholder="—" /></Field>
+        <Field label={t("track")}><EditableSelect value={f.track} onChange={(v) => set("track", v)} list={vocab.tracks} listName="tracks" mutateVocab={mutateVocab} lang={lang} isAr={isAr} t={t} placeholder="—" /></Field>
       </div>
 
       <Field label={t("themeF")}>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-          {vocab.themes.map((th) => {
-            const on = f.themes.includes(th.k);
-            return <button key={th.k} onClick={() => toggleTheme(th.k)} className="vobl-pill" style={{ background: on ? C.teal : C.mist, color: on ? "#fff" : C.ink, fontSize: 11.5 }}>{th[lang]}</button>;
-          })}
-        </div>
+        <ThemeEditor themes={vocab.themes} selected={f.themes} toggle={toggleTheme} mutateVocab={mutateVocab} lang={lang} t={t} />
       </Field>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
-        <Field label={t("impact")}><LevelSel k="impactLevel" /></Field>
-        <Field label={t("engagement")}><LevelSel k="engagementLevel" /></Field>
-        <Field label={t("classification")}><LevelSel k="classification" /></Field>
+        <Field label={t("impact")}><LevelSelect value={f.impactLevel} onChange={(v) => set("impactLevel", v)} t={t} /></Field>
+        <Field label={t("engagement")}><LevelSelect value={f.engagementLevel} onChange={(v) => set("engagementLevel", v)} t={t} /></Field>
+        <Field label={t("classification")}><LevelSelect value={f.classification} onChange={(v) => set("classification", v)} t={t} /></Field>
       </div>
-
-      <Field label={t("strategicValue") + " (ع)"}><textarea value={f.strategicValue_ar} onChange={(e) => set("strategicValue_ar", e.target.value)} dir="rtl" rows={2} className="vobl-input" style={{ width: "100%", resize: "vertical" }} /></Field>
-      <Field label={t("strategicValue") + " (EN)"}><textarea value={f.strategicValue_en} onChange={(e) => set("strategicValue_en", e.target.value)} dir="ltr" rows={2} className="vobl-input" style={{ width: "100%", resize: "vertical" }} /></Field>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
         <Field label={t("date")}><input type="date" value={f.date} onChange={(e) => set("date", e.target.value)} className="vobl-input" style={{ width: "100%" }} /></Field>
@@ -1325,17 +1480,40 @@ function Reports({ ctx }) {
   const [format, setFormat] = useState("LeadershipBrief");
   const [rlang, setRlang] = useState("ar");
   const [built, setBuilt] = useState(null);
+  const [sections, setSections] = useState({ intro: false, metrics: true, quotes: true, themes: true, insights: true, considerations: true, appendix: false });
+  const [intro, setIntro] = useState("");
+  const [editable, setEditable] = useState(false);
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const [reportKey, setReportKey] = useState(0);
 
   const cadenceDays = { Weekly: 7, Monthly: 30, Quarterly: 92, Annual: 366 };
+  const toggleSection = (k) => setSections((s) => ({ ...s, [k]: !s[k] }));
+
+  // Inline editing is driven through the DOM (not React state) so that manual
+  // tweaks survive re-renders; the memoized, keyed ReportPreview is never
+  // reconciled away underneath the edits.
+  const toggleEdit = () => {
+    const el = document.getElementById("vobl-print");
+    if (!el) return;
+    const on = !editable;
+    el.setAttribute("contenteditable", on ? "true" : "false");
+    el.style.outline = on ? `2px dashed ${C.teal}` : "none";
+    el.style.outlineOffset = on ? "4px" : "0";
+    setEditable(on);
+  };
 
   const build = () => {
+    setReportKey((k) => k + 1);
     const cut = daysAgo(cadenceDays[cadence]);
     const inPeriod = scored.filter((q) => q.date >= cut && (q.status === "Verified" || q.status === "Featured"));
     const curated = [...inPeriod].sort((a, b) => b._score - a._score);
     const limit = format === "ExecSummary" ? 4 : format === "LeadershipBrief" ? 8 : curated.length;
     const themeFreq = freqBy(inPeriod, (q) => q.themes).slice(0, 6);
+    setEditable(false);
     setBuilt({
       cadence, format, rlang,
+      sections: { ...sections },
+      intro: intro.trim(),
       generatedAt: new Date().toISOString().slice(0, 10),
       metrics: {
         total: inPeriod.length,
@@ -1346,8 +1524,39 @@ function Reports({ ctx }) {
       themeFreq,
       insights: insights.filter((i) => i.status === "Verified"),
       considerations: considerations.filter((c) => c.status === "Verified"),
-      showAppendix: format === "FullReport",
     });
+  };
+
+  // Render the live report DOM to a multi-page A4 PDF file (no print dialog).
+  const exportPdf = async () => {
+    const el = document.getElementById("vobl-print");
+    if (!el) return;
+    setPdfBusy(true);
+    const prevOutline = el.style.outline;
+    el.style.outline = "none";
+    try {
+      const canvas = await html2canvas(el, { scale: 2, backgroundColor: "#ffffff", useCORS: true, windowWidth: el.scrollWidth });
+      const pdf = new jsPDF({ unit: "pt", format: "a4", compress: true });
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+      const imgW = pageW;
+      const imgH = (canvas.height * imgW) / canvas.width;
+      const img = canvas.toDataURL("image/jpeg", 0.95);
+      let position = 0, heightLeft = imgH;
+      pdf.addImage(img, "JPEG", 0, position, imgW, imgH);
+      heightLeft -= pageH;
+      while (heightLeft > 0) {
+        position -= pageH;
+        pdf.addPage();
+        pdf.addImage(img, "JPEG", 0, position, imgW, imgH);
+        heightLeft -= pageH;
+      }
+      pdf.save("voice-of-beneficiaries-report.pdf");
+    } catch (e) {
+      alert(isAr ? "تعذّر إنشاء ملف PDF" : "Could not generate the PDF");
+    }
+    el.style.outline = prevOutline;
+    setPdfBusy(false);
   };
 
   const Opt = ({ value, setValue, options }) => (
@@ -1357,6 +1566,11 @@ function Reports({ ctx }) {
       ))}
     </div>
   );
+
+  const sectionDefs = [
+    ["intro", t("secIntro")], ["metrics", t("secMetrics")], ["quotes", t("secQuotes")],
+    ["themes", t("secThemes")], ["insights", t("secInsights")], ["considerations", t("secConsiderations")], ["appendix", t("secAppendix")],
+  ];
 
   return (
     <div>
@@ -1370,23 +1584,50 @@ function Reports({ ctx }) {
             </div>
           </div>
         </div>
-        <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+
+        {/* Section selection */}
+        <div style={{ marginTop: 18 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: C.green, marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}><SlidersHorizontal size={14} /> {t("reportSections")}</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {sectionDefs.map(([k, lab]) => (
+              <button key={k} onClick={() => toggleSection(k)} className="vobl-pill"
+                style={{ display: "inline-flex", alignItems: "center", gap: 6, background: sections[k] ? C.teal : C.mist, color: sections[k] ? "#fff" : C.ink, fontSize: 12 }}>
+                {sections[k] ? <Check size={12} /> : <Plus size={12} />} {lab}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {sections.intro && (
+          <div style={{ marginTop: 14 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: C.green, marginBottom: 6 }}>{t("secIntro")}</div>
+            <textarea value={intro} onChange={(e) => setIntro(e.target.value)} dir={isAr ? "rtl" : "ltr"} rows={3}
+              placeholder={t("introPlaceholder")} className="vobl-input" style={{ width: "100%", resize: "vertical" }} />
+          </div>
+        )}
+
+        <div style={{ display: "flex", gap: 8, marginTop: 16, flexWrap: "wrap", alignItems: "center" }}>
           <button onClick={build} className="vobl-btn-primary"><FileText size={15} /> {t("buildReport")}</button>
-          {built && <button onClick={() => window.print()} className="vobl-btn-ghost"><Printer size={15} /> {t("exportPdf")}</button>}
+          {built && <button onClick={exportPdf} disabled={pdfBusy} className="vobl-btn-primary">{pdfBusy ? <Loader2 size={15} className="vobl-spin" /> : <FileDown size={15} />} {t("exportPdf")}</button>}
+          {built && <button onClick={toggleEdit} className="vobl-btn-ghost"><Pencil size={15} /> {editable ? t("doneEditing") : t("editContent")}</button>}
+          {built && editable && <span style={{ fontSize: 11.5, color: C.muted }}>{t("editHint")}</span>}
         </div>
       </Card>
 
-      {built && <ReportPreview built={built} vocab={vocab} />}
+      {built && <ReportPreview key={reportKey} built={built} vocab={vocab} />}
     </div>
   );
 }
 
-function ReportPreview({ built, vocab }) {
+const ReportPreview = React.memo(function ReportPreview({ built, vocab }) {
   const l = built.rlang;
   const isAr = l === "ar";
   const L = (k) => UI[k][l];
   const maxTheme = built.themeFreq[0]?.[1] || 1;
+  const S = built.sections || { metrics: true, quotes: true, themes: true, insights: true, considerations: true, appendix: false, intro: false };
+  const H = ({ children }) => <div style={{ fontSize: 14, fontWeight: 700, color: C.green, marginBottom: 12 }}>{children}</div>;
   return (
+   <div style={{ maxWidth: 820, margin: "0 auto" }}>
     <div id="vobl-print" dir={isAr ? "rtl" : "ltr"} style={{ background: "#fff", border: `1px solid ${C.line}`, borderRadius: 10, overflow: "hidden" }}>
       {/* cover band */}
       <div style={{ background: C.quote, color: "#fff", padding: "26px 30px", position: "relative", overflow: "hidden" }}>
@@ -1398,46 +1639,57 @@ function ReportPreview({ built, vocab }) {
       </div>
 
       <div style={{ padding: 30 }}>
+        {/* intro */}
+        {S.intro && built.intro && (
+          <div style={{ marginBottom: 24, fontSize: 13.5, lineHeight: 1.9, color: C.ink, whiteSpace: "pre-wrap" }}>{built.intro}</div>
+        )}
+
         {/* metrics */}
-        <div style={{ fontSize: 14, fontWeight: 700, color: C.green, marginBottom: 12 }}>{L("metricsSnapshot")}</div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginBottom: 24 }}>
-          {[[L("totalQuotes"), built.metrics.total], [L("totalSources"), built.metrics.sources], [L("highImpact"), built.metrics.highImpact]].map(([lab, v], i) => (
-            <div key={i} style={{ border: `1px solid ${C.line}`, borderRadius: 9, padding: 14, textAlign: "center" }}>
-              <div style={{ fontSize: 26, fontWeight: 700, color: C.green }}>{v}</div>
-              <div style={{ fontSize: 11.5, color: C.muted, marginTop: 3 }}>{lab}</div>
-            </div>
-          ))}
-        </div>
+        {S.metrics && <>
+          <H>{L("metricsSnapshot")}</H>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginBottom: 24 }}>
+            {[[L("totalQuotes"), built.metrics.total], [L("totalSources"), built.metrics.sources], [L("highImpact"), built.metrics.highImpact]].map(([lab, v], i) => (
+              <div key={i} style={{ border: `1px solid ${C.line}`, borderRadius: 9, padding: 14, textAlign: "center" }}>
+                <div style={{ fontSize: 26, fontWeight: 700, color: C.green }}>{v}</div>
+                <div style={{ fontSize: 11.5, color: C.muted, marginTop: 3 }}>{lab}</div>
+              </div>
+            ))}
+          </div>
+        </>}
 
         {/* curated quotes */}
-        <div style={{ fontSize: 14, fontWeight: 700, color: C.green, marginBottom: 12 }}>{L("curatedQuotes")}</div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 24 }}>
-          {built.quotes.map((q) => (
-            <div key={q.id} style={{ borderInlineStart: `3px solid ${C.lime}`, paddingInlineStart: 14, paddingTop: 2, paddingBottom: 2 }}>
-              <div style={{ fontSize: 14.5, lineHeight: 1.8, color: C.ink, fontWeight: 500 }}>“{q["quote_" + l] || q.quote_ar}”</div>
-              <div style={{ fontSize: 12, color: C.muted, marginTop: 6 }}>— {q["sourceName_" + l] || q.sourceName_ar} · {Lv(vocab.sourceTypes, q.sourceType, l)} · {Lv(vocab.programs, q.program, l)}</div>
-            </div>
-          ))}
-          {!built.quotes.length && <div style={{ color: C.muted, fontSize: 13 }}>{UI.noData[l]}</div>}
-        </div>
+        {S.quotes && <>
+          <H>{L("curatedQuotes")}</H>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 24 }}>
+            {built.quotes.map((q) => (
+              <div key={q.id} style={{ borderInlineStart: `3px solid ${C.lime}`, paddingInlineStart: 14, paddingTop: 2, paddingBottom: 2 }}>
+                <div style={{ fontSize: 14.5, lineHeight: 1.8, color: C.ink, fontWeight: 500 }}>“{q["quote_" + l] || q.quote_ar}”</div>
+                <div style={{ fontSize: 12, color: C.muted, marginTop: 6 }}>— {q["sourceName_" + l] || q.sourceName_ar} · {Lv(vocab.sourceTypes, q.sourceType, l)} · {Lv(vocab.programs, q.program, l)}</div>
+              </div>
+            ))}
+            {!built.quotes.length && <div style={{ color: C.muted, fontSize: 13 }}>{UI.noData[l]}</div>}
+          </div>
+        </>}
 
         {/* themes */}
-        <div style={{ fontSize: 14, fontWeight: 700, color: C.green, marginBottom: 12 }}>{UI.topThemes[l]}</div>
-        <div style={{ marginBottom: 24 }}>
-          {built.themeFreq.map(([k, v]) => <Bar key={k} label={Lv(vocab.themes, k, l)} value={v} max={maxTheme} color={C.teal} />)}
-        </div>
+        {S.themes && <>
+          <H>{UI.topThemes[l]}</H>
+          <div style={{ marginBottom: 24 }}>
+            {built.themeFreq.map(([k, v]) => <Bar key={k} label={Lv(vocab.themes, k, l)} value={v} max={maxTheme} color={C.teal} />)}
+          </div>
+        </>}
 
         {/* insights */}
-        {built.insights.length > 0 && (
+        {S.insights && built.insights.length > 0 && (
           <div style={{ marginBottom: 24 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: C.green, marginBottom: 12 }}>{UI.insightsTitle[l]}</div>
+            <H>{UI.insightsTitle[l]}</H>
             {built.insights.map((i) => <div key={i.id} style={{ fontSize: 13.5, lineHeight: 1.8, color: C.ink, marginBottom: 8, paddingInlineStart: 14, borderInlineStart: `3px solid ${C.teal}` }}>{i[l]}</div>)}
           </div>
         )}
 
         {/* strategic considerations */}
-        {built.considerations.length > 0 && (
-          <div style={{ background: C.mist, borderRadius: 10, padding: 18, marginBottom: built.showAppendix ? 24 : 0 }}>
+        {S.considerations && built.considerations.length > 0 && (
+          <div style={{ background: C.mist, borderRadius: 10, padding: 18, marginBottom: S.appendix ? 24 : 0 }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: C.green, marginBottom: 14 }}>{UI.considerationsTitle.en} · {UI.considerationsTitle.ar}</div>
             {built.considerations.map((c) => (
               <div key={c.id}>
@@ -1453,7 +1705,7 @@ function ReportPreview({ built, vocab }) {
         )}
 
         {/* appendix */}
-        {built.showAppendix && (
+        {S.appendix && (
           <div>
             <div style={{ fontSize: 14, fontWeight: 700, color: C.green, marginBottom: 10 }}>{isAr ? "ملحق: قائمة المصادر" : "Appendix: Source Register"}</div>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11.5 }}>
@@ -1480,8 +1732,9 @@ function ReportPreview({ built, vocab }) {
         </div>
       </div>
     </div>
+   </div>
   );
-}
+});
 
 /* ======================================================================== */
 /* ARCHIVE */
@@ -1521,7 +1774,7 @@ function ArchiveView({ ctx }) {
   );
 }
 function AssetEditor({ ctx, asset, onSave, onDelete, onClose }) {
-  const { scored, vocab, lang, t, isAr } = ctx;
+  const { scored, vocab, lang, t, isAr, mutateVocab } = ctx;
   const [f, setF] = useState({ ...asset });
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }));
   const toggleQuote = (id) => setF((p) => ({ ...p, linkedQuoteIds: p.linkedQuoteIds.includes(id) ? p.linkedQuoteIds.filter((x) => x !== id) : [...p.linkedQuoteIds, id] }));
@@ -1529,9 +1782,7 @@ function AssetEditor({ ctx, asset, onSave, onDelete, onClose }) {
     <Drawer onClose={onClose} isAr={isAr} title={t("addAsset")}>
       <div style={{ marginBottom: 13 }}>
         <label style={{ fontSize: 12, fontWeight: 600, color: C.green, display: "block", marginBottom: 5 }}>{t("assetType")}</label>
-        <select value={f.type} onChange={(e) => set("type", e.target.value)} className="vobl-input" style={{ width: "100%" }}>
-          {vocab.assetTypes.map((o) => <option key={o.k} value={o.k}>{o[lang]}</option>)}
-        </select>
+        <EditableSelect value={f.type} onChange={(v) => set("type", v)} list={vocab.assetTypes} listName="assetTypes" mutateVocab={mutateVocab} lang={lang} isAr={isAr} t={t} placeholder="—" />
       </div>
       <div style={{ marginBottom: 13 }}><label style={{ fontSize: 12, fontWeight: 600, color: C.green, display: "block", marginBottom: 5 }}>{t("title")} (ع)</label><input value={f.title_ar} onChange={(e) => set("title_ar", e.target.value)} dir="rtl" className="vobl-input" style={{ width: "100%" }} /></div>
       <div style={{ marginBottom: 13 }}><label style={{ fontSize: 12, fontWeight: 600, color: C.green, display: "block", marginBottom: 5 }}>{t("title")} (EN)</label><input value={f.title_en} onChange={(e) => set("title_en", e.target.value)} dir="ltr" className="vobl-input" style={{ width: "100%" }} /></div>

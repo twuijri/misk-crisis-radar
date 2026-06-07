@@ -1037,6 +1037,70 @@ function generateAdvisory(id){
     +`<div class="doc-foot">${esc(t("briefing_date"))}: ${esc(today)} · ${LANG==="ar"?"مسك · رادار الأزمات":"Misk · Crisis Radar"}</div>`;
   openPrintWindow(t("advisory_doc_title")+" — "+c.title, docFrame(inner));
 }
+/* Build a polished, email-client-safe HTML version of the draft (inline styles,
+   table layout) so pasting into Outlook/Gmail yields a formatted message. */
+function buildEmailHtml(c, subject){
+  const cls=clsLabel(clsOf(c)), sc=compositeScore(c).toFixed(1);
+  const isAr=LANG==="ar"; const dir=isAr?"rtl":"ltr"; const align=isAr?"right":"left";
+  const band = clsOf(c)>=4 ? "#D32F2F" : clsOf(c)>=2.5 ? "#F57C00" : "#1B7D5C";
+  const section=(title,body)=> (body&&String(body).trim())
+    ? `<tr><td style="padding:16px 26px 0;text-align:${align}"><div style="font-size:13px;font-weight:700;color:#1B7D5C;margin:0 0 5px">${esc(title)}</div><div style="font-size:14px;line-height:1.75;color:#1B1B1B;white-space:pre-wrap">${esc(body)}</div></td></tr>`
+    : "";
+  const meta=[];
+  meta.push(`${esc(t("classification_word"))}: <b>${esc(cls)}</b> (${esc(sc)}/5)`);
+  meta.push(`${esc(t("status_word"))}: ${esc(statusLabel(c.status))}`);
+  if(c.owner) meta.push(`${esc(t("owner_word"))}: ${esc(stakeLabel(c.owner))}`);
+  return `<div dir="${dir}" style="margin:0;padding:0;background:#F5F9F8">
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#F5F9F8;padding:18px 0">
+   <tr><td align="center">
+    <table role="presentation" cellpadding="0" cellspacing="0" width="600" style="max-width:600px;width:100%;background:#FFFFFF;border-radius:14px;overflow:hidden;border:1px solid #E8EDEB;font-family:'Segoe UI',Tahoma,Arial,sans-serif">
+     <tr><td style="background:#1B7D5C;background:linear-gradient(135deg,#1B7D5C,#2DB89F);padding:22px 26px;text-align:${align}">
+       <div style="font-size:11px;letter-spacing:1px;color:#C9F0E5;font-weight:700">${isAr?"مسك · رادار الأزمات":"MISK · CRISIS RADAR"}</div>
+       <div style="font-size:19px;font-weight:700;color:#FFFFFF;margin-top:6px">${esc(c.title)}</div>
+       <div style="display:inline-block;margin-top:10px;background:rgba(255,255,255,.18);color:#FFFFFF;font-size:12px;font-weight:700;padding:4px 11px;border-radius:999px;border-${align==="right"?"right":"left"}:3px solid ${band}">${esc(cls)} · ${esc(sc)}/5</div>
+     </td></tr>
+     <tr><td style="padding:18px 26px 0;text-align:${align}">
+       <div style="font-size:14px;color:#1B1B1B;margin-bottom:8px">${esc(t("email_greeting"))}</div>
+       <div style="font-size:14px;line-height:1.7;color:#1B1B1B">${esc(t("email_intro"))}</div>
+       <div style="font-size:13px;color:#5A5A5A;margin-top:10px;line-height:1.9">${meta.join("&nbsp;&nbsp;·&nbsp;&nbsp;")}</div>
+     </td></tr>
+     ${section(t("exec_summary"), c.summary)}
+     ${section(t("email_why"), whyText(c))}
+     ${section(t("email_impact"), c.expected_impact)}
+     ${section(t("email_reco"), c.recommended_action)}
+     <tr><td style="padding:18px 26px 0;text-align:${align}"><div style="font-size:13px;color:#5A5A5A;font-style:italic">${esc(t("email_attach"))}</div></td></tr>
+     <tr><td style="padding:18px 26px 24px;text-align:${align}"><div style="font-size:13.5px;line-height:1.7;color:#1B1B1B;white-space:pre-wrap;border-top:1px solid #E8EDEB;padding-top:14px">${esc(t("email_regards"))}</div></td></tr>
+    </table>
+   </td></tr>
+  </table>
+ </div>`;
+}
+
+/* Copy rich HTML (with a plain-text fallback) to the clipboard. */
+async function richCopy(html, text){
+  try{
+    if(navigator.clipboard && window.ClipboardItem){
+      await navigator.clipboard.write([new ClipboardItem({
+        "text/html": new Blob([html],{type:"text/html"}),
+        "text/plain": new Blob([text],{type:"text/plain"})
+      })]);
+      return true;
+    }
+  }catch(e){}
+  try{
+    const div=document.createElement("div");
+    div.style.cssText="position:fixed;left:-9999px;top:0;white-space:pre-wrap";
+    div.setAttribute("contenteditable","true"); div.innerHTML=html;
+    document.body.appendChild(div);
+    const range=document.createRange(); range.selectNodeContents(div);
+    const sel=window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+    const ok=document.execCommand("copy"); sel.removeAllRanges(); document.body.removeChild(div);
+    if(ok) return true;
+  }catch(e){}
+  try{ await navigator.clipboard.writeText(text); return true; }catch(e){}
+  return false;
+}
+
 function generateEmail(id){
   const c=CASES.find(x=>x.id===id); if(!c) return;
   const cls=clsLabel(clsOf(c)), sc=compositeScore(c).toFixed(1);
@@ -1055,14 +1119,14 @@ function generateEmail(id){
   L.push(t("email_attach"), "");
   L.push(t("email_regards"));
   const body=L.join("\n");
+  const html=buildEmailHtml(c, subject);
   document.getElementById("emailBody").value=body;
   const a=document.getElementById("emailOpenBtn");
   a.href=`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   const cb=document.getElementById("emailCopyBtn"); cb.textContent=t("copy");
-  cb.onclick=()=>{ const ta=document.getElementById("emailBody"); ta.focus(); ta.select();
-    const done=()=>{ cb.textContent=t("copied"); setTimeout(()=>cb.textContent=t("copy"),1800); };
-    if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(ta.value).then(done,()=>{try{document.execCommand("copy");}catch(e){} done();}); }
-    else { try{document.execCommand("copy");}catch(e){} done(); }
+  cb.onclick=()=>{
+    const done=ok=>{ cb.textContent=t(ok?"copied":"copy"); setTimeout(()=>cb.textContent=t("copy"),1800); };
+    richCopy(html, body).then(done);
   };
   document.getElementById("emailModal").classList.add("active");
 }
