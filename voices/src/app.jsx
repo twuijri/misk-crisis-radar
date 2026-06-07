@@ -167,6 +167,9 @@ const UI = {
   optionEn: { ar: "الاسم بالإنجليزية", en: "Name (English)" },
   add: { ar: "إضافة", en: "Add" },
   manageList: { ar: "تعديل القائمة", en: "Edit list" },
+  addSource: { ar: "إضافة مصدر جديد", en: "Add new source" },
+  sourcePick: { ar: "اختر المصدر", en: "Select source" },
+  sourceEmpty: { ar: "لا توجد مصادر بعد — أضف واحداً", en: "No sources yet — add one" },
   reportSections: { ar: "أقسام التقرير", en: "Report sections" },
   editContent: { ar: "تحرير النص", en: "Edit text" },
   doneEditing: { ar: "إنهاء التحرير", en: "Done editing" },
@@ -496,6 +499,29 @@ const seed = () => {
   };
 };
 
+/* Forward-compat normalization. Older saved blobs predate some vocab lists
+   (e.g. the editable "sources" list). Fill any missing list from the seed,
+   and — the first time only — build the Source list from the names already
+   typed into existing quotes so nothing is lost. */
+function normalizeData(d) {
+  const base = seedVocab();
+  const vocab = { ...base, ...(d.vocab || {}) };
+  for (const k of Object.keys(base)) if (!Array.isArray(vocab[k])) vocab[k] = base[k];
+  const hadSources = d.vocab && Array.isArray(d.vocab.sources);
+  if (!hadSources) {
+    const seen = new Map();
+    (d.quotes || []).forEach((q) => {
+      const ar = (q.sourceName_ar || "").trim();
+      const en = (q.sourceName_en || "").trim();
+      if (!ar && !en) return;
+      const id = ar + "||" + en;
+      if (!seen.has(id)) seen.set(id, { k: "s_" + uid(), ar: ar || en, en: en || ar });
+    });
+    vocab.sources = Array.from(seen.values());
+  }
+  return { ...d, vocab };
+}
+
 /* ---------------------- scoring ---------------------- */
 function computeScore(q, config) {
   const lv = config.scoring.levelValues;
@@ -554,10 +580,10 @@ export default function App({ onAuthExpired, onLogout }) {
         if (e && e.unauthorized && onAuthExpired) { onAuthExpired(); return; }
         loaded = null;
       }
-      if (!loaded || !loaded.quotes) {
-        loaded = seed();
-        try { await kvPut(KEY, loaded); } catch (e) {}
-      }
+      let fresh = false;
+      if (!loaded || !loaded.quotes) { loaded = seed(); fresh = true; }
+      loaded = normalizeData(loaded);
+      if (fresh) { try { await kvPut(KEY, loaded); } catch (e) {} }
       setData(loaded);
       loadedRef.current = true;
     })();
@@ -929,6 +955,90 @@ function EditableSelect({ value, onChange, list, listName, mutateVocab, lang, is
   );
 }
 
+/* The Source field: one bilingual dropdown (instead of two free-text inputs).
+   Each option carries an Arabic + English name; picking one fills both the
+   sourceName_ar and sourceName_en fields on the quote. New sources are added
+   inline (Arabic + English) and persist to the editable `sources` vocabulary. */
+function SourceSelect({ arValue, enValue, onPick, list, mutateVocab, lang, isAr, t }) {
+  const [open, setOpen] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [manage, setManage] = useState(false);
+  const [ar, setAr] = useState("");
+  const [en, setEn] = useState("");
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) { setOpen(false); setAdding(false); setManage(false); } };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [open]);
+
+  const curAr = (arValue || "").trim(), curEn = (enValue || "").trim();
+  const display = (isAr ? curAr || curEn : curEn || curAr);
+  const isCurrent = (o) => (o.ar || "").trim() === curAr && (o.en || "").trim() === curEn;
+
+  const confirmAdd = () => {
+    const a = ar.trim(), e = en.trim();
+    if (!a && !e) return;
+    mutateVocab("sources", (arr) => [...arr, { k: "s_" + uid(), ar: a || e, en: e || a }]);
+    onPick(a || e, e || a);
+    setAr(""); setEn(""); setAdding(false); setOpen(false);
+  };
+  const del = (k) => mutateVocab("sources", (arr) => arr.filter((o) => o.k !== k));
+
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <button type="button" onClick={() => setOpen((o) => !o)} className="vobl-input"
+        style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", background: "#fff", textAlign: isAr ? "right" : "left" }}>
+        <span style={{ color: display ? C.ink : C.muted }}>{display || t("sourcePick")}</span>
+        <ChevronDown size={15} style={{ color: C.muted, flexShrink: 0 }} />
+      </button>
+      {open && (
+        <div style={{ position: "absolute", zIndex: 30, top: "calc(100% + 4px)", insetInlineStart: 0, width: "100%", background: "#fff", border: `1px solid ${C.line}`, borderRadius: 9, boxShadow: "0 10px 30px rgba(0,0,0,0.14)", maxHeight: 280, overflowY: "auto", padding: 5 }}>
+          {list.length === 0 && <div style={{ padding: "8px 10px", fontSize: 12.5, color: C.muted }}>{t("sourceEmpty")}</div>}
+          {list.map((o) => (
+            <div key={o.k} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <button type="button" onClick={() => { onPick(o.ar, o.en); setOpen(false); }}
+                style={{ flex: 1, textAlign: isAr ? "right" : "left", padding: "8px 10px", border: "none", background: isCurrent(o) ? C.mist : "transparent", borderRadius: 7, cursor: "pointer", fontFamily: "inherit", fontSize: 13, color: C.ink, display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ flex: 1 }}>{o[lang]}<span style={{ color: C.muted, fontSize: 11 }}> · {lang === "ar" ? o.en : o.ar}</span></span>
+                {isCurrent(o) && <Check size={13} style={{ color: C.teal }} />}
+              </button>
+              {manage && (
+                <button type="button" onClick={() => del(o.k)} title={t("delete")}
+                  style={{ padding: 6, border: "none", background: "transparent", color: "#B33", cursor: "pointer", borderRadius: 6 }}><Trash2 size={14} /></button>
+              )}
+            </div>
+          ))}
+          <div style={{ borderTop: `1px solid ${C.line}`, marginTop: 5, paddingTop: 5 }}>
+            {adding ? (
+              <div style={{ padding: 6, display: "flex", flexDirection: "column", gap: 6 }}>
+                <input autoFocus value={ar} onChange={(e) => setAr(e.target.value)} dir="rtl" placeholder={t("optionAr")} className="vobl-input" style={{ width: "100%" }} />
+                <input value={en} onChange={(e) => setEn(e.target.value)} dir="ltr" placeholder={t("optionEn")} className="vobl-input" style={{ width: "100%" }} />
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button type="button" onClick={confirmAdd} className="vobl-btn-primary" style={{ flex: 1, justifyContent: "center" }}><Check size={14} /> {t("add")}</button>
+                  <button type="button" onClick={() => { setAdding(false); setAr(""); setEn(""); }} className="vobl-btn-ghost">{t("cancel")}</button>
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: "flex", gap: 4 }}>
+                <button type="button" onClick={() => { setAdding(true); setManage(false); }}
+                  style={{ flex: 1, display: "flex", alignItems: "center", gap: 6, padding: "8px 10px", border: "none", background: "transparent", color: C.green, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", fontSize: 12.5 }}>
+                  <Plus size={14} /> {t("addSource")}
+                </button>
+                <button type="button" onClick={() => setManage((m) => !m)} title={t("manageList")}
+                  style={{ display: "flex", alignItems: "center", gap: 5, padding: "8px 10px", border: "none", background: manage ? C.mist : "transparent", color: manage ? C.teal : C.muted, cursor: "pointer", fontFamily: "inherit", fontSize: 12.5, borderRadius: 7 }}>
+                  <Pencil size={13} />
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* Editable, multi-select theme picker (chips). Add/delete persists to vocab. */
 function ThemeEditor({ themes, selected, toggle, mutateVocab, lang, t }) {
   const [adding, setAdding] = useState(false);
@@ -1257,8 +1367,11 @@ function QuoteEditor({ ctx, quote, onSave, onDelete, onClose }) {
       </Field>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-        <Field label={t("source") + " (ع)"}><input value={f.sourceName_ar} onChange={(e) => set("sourceName_ar", e.target.value)} dir="rtl" className="vobl-input" style={{ width: "100%" }} /></Field>
-        <Field label={t("source") + " (EN)"}><input value={f.sourceName_en} onChange={(e) => set("sourceName_en", e.target.value)} dir="ltr" className="vobl-input" style={{ width: "100%" }} /></Field>
+        <Field label={t("source")}>
+          <SourceSelect arValue={f.sourceName_ar} enValue={f.sourceName_en}
+            onPick={(ar, en) => setF((p) => ({ ...p, sourceName_ar: ar, sourceName_en: en }))}
+            list={vocab.sources || []} mutateVocab={mutateVocab} lang={lang} isAr={isAr} t={t} />
+        </Field>
         <Field label={t("sourceType")}>
           <EditableSelect value={f.sourceType} onChange={(v) => set("sourceType", v)} list={vocab.sourceTypes} listName="sourceTypes" mutateVocab={mutateVocab} lang={lang} isAr={isAr} t={t} placeholder="—" />
         </Field>
