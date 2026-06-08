@@ -1,5 +1,7 @@
 import * as esbuild from "esbuild";
-import { rmSync, mkdirSync, copyFileSync } from "node:fs";
+import { rmSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+
+const APP_VERSION = process.env.APP_VERSION || "dev";
 
 /* Bundle the React library into a single self-contained file. No CDN:
    everything (React, lucide-react, app code) is bundled, and fonts are
@@ -21,11 +23,14 @@ await esbuild.build({
   jsx: "automatic",
   define: {
     "process.env.NODE_ENV": '"production"',
-    __APP_VERSION__: JSON.stringify(process.env.APP_VERSION || "dev"),
+    __APP_VERSION__: JSON.stringify(APP_VERSION),
   },
   outfile: `${outdir}/bundle.js`,
   logLevel: "info",
 });
 
-copyFileSync("public/index.html", `${outdir}/index.html`);
-console.log("voices: build complete → dist/");
+// Stamp the version into the shell so the bundle URL is cache-busted on every
+// deploy (bundle.js?v=<version>) — otherwise browsers serve a stale cached JS.
+const html = readFileSync("public/index.html", "utf8").replaceAll("__APP_VERSION__", APP_VERSION);
+writeFileSync(`${outdir}/index.html`, html);
+console.log(`voices: build complete → dist/ (version ${APP_VERSION})`);
