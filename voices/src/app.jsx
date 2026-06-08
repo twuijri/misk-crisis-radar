@@ -210,6 +210,17 @@ const seedVocab = () => ({
     { k: "community", ar: "المشاركة المجتمعية", en: "Community Engagement" },
     { k: "innovation", ar: "الابتكار", en: "Innovation" },
   ],
+  impactLevels: [
+    { k: "High", ar: "عالٍ", en: "High", value: 100 },
+    { k: "Medium", ar: "متوسط", en: "Medium", value: 60 },
+    { k: "Low", ar: "منخفض", en: "Low", value: 30 },
+  ],
+  engagementLevels: [
+    { k: "High", ar: "عالٍ", en: "High", value: 100 },
+    { k: "Medium", ar: "متوسط", en: "Medium", value: 60 },
+    { k: "Low", ar: "منخفض", en: "Low", value: 30 },
+    { k: "NA", ar: "لا ينطبق", en: "N/A", value: null },
+  ],
   themes: [
     { k: "youth", ar: "تمكين الشباب", en: "Youth Empowerment" },
     { k: "skills", ar: "تنمية المهارات", en: "Skills Development" },
@@ -524,15 +535,23 @@ function normalizeData(d) {
 }
 
 /* ---------------------- scoring ---------------------- */
-function computeScore(q, config) {
-  const lv = config.scoring.levelValues;
+/* Resolve a level key to its numeric weight. Built-in High/Medium/Low come
+   from config; custom levels added to the editable lists carry their own
+   `value`, defaulting to the Medium value when unspecified. */
+function levelVal(key, vocabList, config) {
+  const base = config.scoring.levelValues;
+  if (base[key] != null) return base[key];
+  const o = (vocabList || []).find((x) => x.k === key);
+  return o && typeof o.value === "number" ? o.value : (base.Medium ?? 60);
+}
+function computeScore(q, config, vocab) {
   const vv = config.scoring.verificationValues;
   const w = { ...config.scoring.weights };
   const isInternal = q.sourceType === "internal_evidence";
   const naEngagement = q.engagementLevel === "NA";
-  const impact = lv[q.impactLevel] ?? 0;
-  let engagement = lv[q.engagementLevel] ?? 0;
-  const classification = lv[q.classification] ?? 0;
+  const impact = levelVal(q.impactLevel, vocab && vocab.impactLevels, config);
+  let engagement = naEngagement ? 0 : levelVal(q.engagementLevel, vocab && vocab.engagementLevels, config);
+  const classification = levelVal(q.classification, null, config);
   const verification = vv[q.status] ?? 0;
   let wI = w.impact, wE = w.engagement, wC = w.classification, wV = w.verification;
   // Engagement doesn't apply (internal evidence, or explicitly N/A): drop its
@@ -548,6 +567,9 @@ const scoreBand = (s) => (s >= 80 ? "High" : s >= 55 ? "Medium" : "Low");
 /* ---------------------- small helpers ---------------------- */
 const lookup = (list, k) => list.find((x) => x.k === k);
 const Lv = (vocabList, k, lang) => { const o = lookup(vocabList, k); return o ? o[lang] : "—"; };
+/* Quote text for display: prefer the current language, but fall back to the
+   other language so a quote that exists in only one language is never blank. */
+const qt = (q, lang) => (q["quote_" + lang] || q["quote_" + (lang === "ar" ? "en" : "ar")] || "");
 
 /* ========================================================================
    APP
@@ -613,7 +635,7 @@ export default function App({ onAuthExpired, onLogout }) {
   }
 
   const { quotes, archive, vocab, config, insights, considerations } = data;
-  const scored = quotes.map((q) => ({ ...q, _score: computeScore(q, config) }));
+  const scored = quotes.map((q) => ({ ...q, _score: computeScore(q, config, vocab) }));
 
   /* ---- mutations ---- */
   const setQuotes = (fn) => setData((d) => ({ ...d, quotes: typeof fn === "function" ? fn(d.quotes) : fn }));
@@ -825,10 +847,10 @@ function provenanceBadge(q, t) {
   if (q.translationSource === "human") return <Badge bg="#E3F2EC" color={C.teal}><CheckCheck size={10} />{t("humanVerified")}</Badge>;
   return <Badge bg="#EEF1ED" color={C.muted}>{t("original")}</Badge>;
 }
-function levelChip(level, t) {
+function levelChip(level, label) {
   const map = { High: { bg: "#E3F2EC", c: C.teal }, Medium: { bg: "#FBF4DF", c: C.amber }, Low: { bg: "#F0F0F0", c: "#888" } };
-  const m = map[level] || map.Low;
-  return <Badge bg={m.bg} color={m.c}>{t(level)}</Badge>;
+  const m = map[level] || { bg: C.mist, c: C.muted };
+  return <Badge bg={m.bg} color={m.c}>{label}</Badge>;
 }
 function Bar({ label, value, max, color }) {
   const pct = max ? Math.round((value / max) * 100) : 0;
@@ -1164,7 +1186,7 @@ function Dashboard({ ctx, setView }) {
             <>
               <Quote size={22} style={{ color: C.tealSoft, opacity: 0.6 }} />
               <div style={{ fontSize: 16, lineHeight: 1.7, fontWeight: 500, margin: "8px 0 14px" }}>
-                {qotw["quote_" + lang] || qotw.quote_ar}
+                {qt(qotw, lang)}
               </div>
               <div style={{ fontSize: 12.5, color: C.tealSoft }}>
                 {qotw["sourceName_" + lang] || qotw.sourceName_ar} · {Lv(vocab.programs, qotw.program, lang)}
@@ -1186,7 +1208,7 @@ function Dashboard({ ctx, setView }) {
               <div key={q.id} onClick={() => { setView("library"); setTimeout(() => ctx.setEditing(q), 50); }}
                 className="vobl-row" style={{ padding: "9px 0", borderBottom: `1px solid ${C.line}`, cursor: "pointer" }}>
                 <div style={{ fontSize: 12.5, color: C.ink, lineHeight: 1.5, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-                  {q["quote_" + lang] || q.quote_ar}
+                  {qt(q, lang)}
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 5, fontSize: 11, color: C.muted }}>
                   <span>{q["sourceName_" + lang] || q.sourceName_ar}</span>
@@ -1260,7 +1282,7 @@ function Library({ ctx }) {
               <div style={{ display: "flex", gap: 8, alignItems: "flex-start", justifyContent: "space-between" }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 14, lineHeight: 1.7, color: C.ink, fontWeight: 500 }}>
-                    {it["quote_" + lang] || it.quote_ar}
+                    {qt(it, lang)}
                   </div>
                   <div style={{ fontSize: 12, color: C.muted, marginTop: 8, display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
                     <strong style={{ color: C.green }}>{it["sourceName_" + lang] || it.sourceName_ar}</strong>
@@ -1278,7 +1300,7 @@ function Library({ ctx }) {
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10, alignItems: "center" }}>
                 {statusBadge(it.status, t)}
                 {provenanceBadge(it, t)}
-                <span style={{ display: "inline-flex", gap: 5 }}>{levelChip(it.impactLevel, t)}</span>
+                <span style={{ display: "inline-flex", gap: 5 }}>{levelChip(it.impactLevel, Lv(vocab.impactLevels, it.impactLevel, lang))}</span>
                 {it.themes.map((th) => (
                   <span key={th} style={{ fontSize: 10.5, padding: "2px 8px", borderRadius: 20, background: C.mist, color: C.green, border: `1px solid ${C.line}` }}>
                     {Lv(vocab.themes, th, lang)}
@@ -1303,7 +1325,7 @@ function QuoteEditor({ ctx, quote, onSave, onDelete, onClose }) {
   const [aiErr, setAiErr] = useState(false);
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }));
   const toggleTheme = (k) => setF((p) => ({ ...p, themes: p.themes.includes(k) ? p.themes.filter((x) => x !== k) : [...p.themes, k] }));
-  const score = computeScore(f, config);
+  const score = computeScore(f, config, vocab);
 
   const doTranslate = async () => {
     setAiBusy("translate"); setAiErr(false);
@@ -1393,8 +1415,8 @@ function QuoteEditor({ ctx, quote, onSave, onDelete, onClose }) {
       </Field>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
-        <Field label={t("impact")}><LevelSelect value={f.impactLevel} onChange={(v) => set("impactLevel", v)} t={t} /></Field>
-        <Field label={t("engagement")}><LevelSelect value={f.engagementLevel} onChange={(v) => set("engagementLevel", v)} t={t} options={["High", "Medium", "Low", "NA"]} /></Field>
+        <Field label={t("impact")}><EditableSelect value={f.impactLevel} onChange={(v) => set("impactLevel", v)} list={vocab.impactLevels} listName="impactLevels" mutateVocab={mutateVocab} lang={lang} isAr={isAr} t={t} placeholder="—" /></Field>
+        <Field label={t("engagement")}><EditableSelect value={f.engagementLevel} onChange={(v) => set("engagementLevel", v)} list={vocab.engagementLevels} listName="engagementLevels" mutateVocab={mutateVocab} lang={lang} isAr={isAr} t={t} placeholder="—" /></Field>
         <Field label={t("classification")}><LevelSelect value={f.classification} onChange={(v) => set("classification", v)} t={t} /></Field>
       </div>
 
@@ -1653,6 +1675,9 @@ function Reports({ ctx }) {
     const prevOutline = el.style.outline;
     el.style.outline = "none";
     try {
+      // Make sure the Arabic webfont is fully loaded before rasterizing, else
+      // html2canvas can fall back to a non-shaping font and break letter joins.
+      if (document.fonts && document.fonts.ready) { try { await document.fonts.ready; } catch (e) {} }
       const canvas = await html2canvas(el, { scale: 2, backgroundColor: "#ffffff", useCORS: true, windowWidth: el.scrollWidth });
       const pdf = new jsPDF({ unit: "pt", format: "a4", compress: true });
       const pageW = pdf.internal.pageSize.getWidth();
@@ -1750,7 +1775,7 @@ const ReportPreview = React.memo(function ReportPreview({ built, vocab }) {
       {/* cover band */}
       <div style={{ background: C.quote, color: "#fff", padding: "26px 30px", position: "relative", overflow: "hidden" }}>
         <div style={{ position: "absolute", top: 0, [isAr ? "left" : "right"]: 0, width: 140, height: 70, background: `repeating-linear-gradient(115deg, ${C.lime} 0 9px, transparent 9px 20px)`, opacity: 0.9 }} />
-        <div style={{ fontSize: 11, color: C.lime, fontWeight: 700, letterSpacing: 1 }}>{isAr ? "مؤسسة مسك · الاتصال الاستراتيجي" : "MISK FOUNDATION · STRATEGIC COMMUNICATIONS"}</div>
+        <div style={{ fontSize: 11, color: C.lime, fontWeight: 700, letterSpacing: isAr ? 0 : 1 }}>{isAr ? "مؤسسة مسك · الاتصال الاستراتيجي" : "MISK FOUNDATION · STRATEGIC COMMUNICATIONS"}</div>
         <div style={{ fontSize: 23, fontWeight: 700, marginTop: 8 }}>{L("appName")}</div>
         <div style={{ fontSize: 14, color: C.tealSoft, marginTop: 4 }}>{L(built.cadence)} · {L(built.format)}</div>
         <div style={{ fontSize: 11.5, color: C.tealSoft, marginTop: 10 }}>{L("period")}: {built.cadence} · {built.generatedAt}</div>
@@ -1781,7 +1806,7 @@ const ReportPreview = React.memo(function ReportPreview({ built, vocab }) {
           <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 24 }}>
             {built.quotes.map((q) => (
               <div key={q.id} style={{ borderInlineStart: `3px solid ${C.lime}`, paddingInlineStart: 14, paddingTop: 2, paddingBottom: 2 }}>
-                <div style={{ fontSize: 14.5, lineHeight: 1.8, color: C.ink, fontWeight: 500 }}>“{q["quote_" + l] || q.quote_ar}”</div>
+                <div style={{ fontSize: 14.5, lineHeight: 1.8, color: C.ink, fontWeight: 500 }}>“{qt(q, l)}”</div>
                 <div style={{ fontSize: 12, color: C.muted, marginTop: 6 }}>— {q["sourceName_" + l] || q.sourceName_ar} · {Lv(vocab.sourceTypes, q.sourceType, l)} · {Lv(vocab.programs, q.program, l)}</div>
               </div>
             ))}
@@ -1879,7 +1904,7 @@ function ArchiveView({ ctx }) {
                   <div style={{ marginTop: 10, fontSize: 11.5, color: C.muted }}>
                     <Link2 size={12} style={{ verticalAlign: "middle" }} /> {linked.length} {t("linkedQuotes")}
                     <div style={{ marginTop: 6, fontSize: 11.5, color: C.ink, background: C.mist, padding: "7px 10px", borderRadius: 7, lineHeight: 1.6 }}>
-                      “{(linked[0]["quote_" + lang] || linked[0].quote_ar).slice(0, 90)}…”
+                      “{qt(linked[0], lang).slice(0, 90)}…”
                     </div>
                   </div>
                 )}
@@ -1914,7 +1939,7 @@ function AssetEditor({ ctx, asset, onSave, onDelete, onClose }) {
           {scored.map((q) => (
             <label key={q.id} style={{ display: "flex", gap: 8, alignItems: "flex-start", padding: "6px 4px", cursor: "pointer", fontSize: 12 }}>
               <input type="checkbox" checked={f.linkedQuoteIds.includes(q.id)} onChange={() => toggleQuote(q.id)} style={{ marginTop: 3 }} />
-              <span style={{ lineHeight: 1.5 }}>{(q["quote_" + lang] || q.quote_ar).slice(0, 70)}…</span>
+              <span style={{ lineHeight: 1.5 }}>{qt(q, lang).slice(0, 70)}…</span>
             </label>
           ))}
         </div>
