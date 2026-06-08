@@ -91,6 +91,7 @@ const UI = {
   High: { ar: "عالٍ", en: "High" },
   Medium: { ar: "متوسط", en: "Medium" },
   Low: { ar: "منخفض", en: "Low" },
+  NA: { ar: "لا ينطبق", en: "N/A" },
   Draft: { ar: "مسودة", en: "Draft" },
   Verified: { ar: "موثّق", en: "Verified" },
   Featured: { ar: "مميّز", en: "Featured" },
@@ -528,12 +529,15 @@ function computeScore(q, config) {
   const vv = config.scoring.verificationValues;
   const w = { ...config.scoring.weights };
   const isInternal = q.sourceType === "internal_evidence";
+  const naEngagement = q.engagementLevel === "NA";
   const impact = lv[q.impactLevel] ?? 0;
   let engagement = lv[q.engagementLevel] ?? 0;
   const classification = lv[q.classification] ?? 0;
   const verification = vv[q.status] ?? 0;
   let wI = w.impact, wE = w.engagement, wC = w.classification, wV = w.verification;
-  if (isInternal && config.scoring.internalEvidenceNeutralizesEngagement) {
+  // Engagement doesn't apply (internal evidence, or explicitly N/A): drop its
+  // weight and redistribute it so the score isn't unfairly dragged to zero.
+  if (naEngagement || (isInternal && config.scoring.internalEvidenceNeutralizesEngagement)) {
     const redis = wE / 2;
     wI += redis; wC += redis; wE = 0; engagement = 0;
   }
@@ -860,10 +864,11 @@ function EditorField({ label, children }) {
     </div>
   );
 }
-function LevelSelect({ value, onChange, t }) {
+function LevelSelect({ value, onChange, t, options }) {
+  const opts = options || ["High", "Medium", "Low"];
   return (
     <select value={value} onChange={(e) => onChange(e.target.value)} className="vobl-input" style={{ width: "100%" }}>
-      {["High", "Medium", "Low"].map((x) => <option key={x} value={x}>{t(x)}</option>)}
+      {opts.map((x) => <option key={x} value={x}>{t(x)}</option>)}
     </select>
   );
 }
@@ -1389,7 +1394,7 @@ function QuoteEditor({ ctx, quote, onSave, onDelete, onClose }) {
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
         <Field label={t("impact")}><LevelSelect value={f.impactLevel} onChange={(v) => set("impactLevel", v)} t={t} /></Field>
-        <Field label={t("engagement")}><LevelSelect value={f.engagementLevel} onChange={(v) => set("engagementLevel", v)} t={t} /></Field>
+        <Field label={t("engagement")}><LevelSelect value={f.engagementLevel} onChange={(v) => set("engagementLevel", v)} t={t} options={["High", "Medium", "Low", "NA"]} /></Field>
         <Field label={t("classification")}><LevelSelect value={f.classification} onChange={(v) => set("classification", v)} t={t} /></Field>
       </div>
 
