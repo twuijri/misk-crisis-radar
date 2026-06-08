@@ -76,6 +76,29 @@ async function migrate() {
       updated_at timestamptz DEFAULT now()
     );
   `);
+  // AI analysis queue. The Hermes agent (running on the same Docker network)
+  // submits social-media findings here; an editor reviews them in the radar's
+  // "AI Analysis" view and promotes the good ones into real crisis_cases.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS ai_findings (
+      id                 uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      is_crisis          boolean DEFAULT false,
+      sentiment          text,
+      source_url         text,
+      platform           text,
+      author             text,
+      title              text,
+      summary            text,
+      expected_impact    text,
+      recommended_action text,
+      category           text,
+      dims               jsonb,
+      payload            jsonb,
+      status             text DEFAULT 'pending',
+      promoted_case_id   uuid,
+      created_at         timestamptz DEFAULT now()
+    );
+  `);
   await pool.query(`
     CREATE OR REPLACE FUNCTION set_updated_at() RETURNS trigger AS $$
     BEGIN NEW.updated_at = now(); RETURN NEW; END;
@@ -152,7 +175,7 @@ const WRITE_METHODS = ["POST", "PATCH", "PUT", "DELETE"];
 // /api/kv and /api/ai requires the code for EVERY method (even reads), so a
 // visitor at /voices/ sees nothing until they log in. The /api/auth route
 // checks the code itself, so it is allowed through here.
-const PRIVATE_PREFIXES = ["/api/kv", "/api/ai"];
+const PRIVATE_PREFIXES = ["/api/kv", "/api/ai", "/api/ai-findings"];
 app.use((req, res, next) => {
   if (req.path === "/api/health" || req.path === "/health") return next();
   if (req.path === "/api/auth") return next();
@@ -264,6 +287,102 @@ r.put("/kv/:key", asyncRoute(async (req, res) => {
     [key, value]
   );
   res.json({ ok: true });
+}));
+
+/* ------------------------------------------------------------
+   AI analysis queue (Hermes agent → human review → crisis case).
+   Every method is gated (see PRIVATE_PREFIXES): Hermes submits findings
+   with the access code, and only a logged-in editor can list, promote,
+   or dismiss them. Promoting copies a finding into a real crisis_case.
+   ------------------------------------------------------------ */
+function sentimentLabel(s) {
+  s = String(s || "").toLowerCase().trim();
+  if (["negative", "neg", "سلبي", "-1", "bad"].includes(s)) return "negative";
+  if (["positive", "pos", "إيجابي", "ايجابي", "1", "good"].includes(s)) return "positive";
+  return "neutral";
+}
+
+r.post("/ai-findings", asyncRoute(async (req, res) => {
+  const b = req.body || {};
+  const dims = {};
+  const src = b.dims && typeof b.dims === "object" ? b.dims : b;
+  DIMS.forEach((d) => { if (src[d] !== undefined) dims[d] = clampDim(src[d]); });
+  const row = {
+    is_crisis: !!b.is_crisis,
+    sentiment: sentimentLabel(b.sentiment),
+    source_url: b.source_url ? String(b.source_url) : null,
+    platform: b.platform ? String(b.platform) : null,
+    author: b.author ? String(b.author) : null,
+    title: b.title ? String(b.title).trim() : null,
+    summary: b.summary ? String(b.summary) : null,
+    expected_impact: b.expected_impact ? String(b.expected_impact) : null,
+    recommended_action: b.recommended_action ? String(b.recommended_action) : null,
+    category: b.category ? String(b.category) : null,
+    dims,
+    payload: b,
+  };
+  const { rows } = await pool.query(
+    `INSERT INTO ai_findings
+       (is_crisis, sentiment, source_url, platform, author, title, summary,
+        expected_impact, recommended_action, category, dims, payload)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`,
+    [row.is_crisis, row.sentiment, row.source_url, row.platform, row.author, row.title,
+     row.summary, row.expected_impact, row.recommended_action, row.category, row.dims, row.payload]
+  );
+  res.status(201).json(rows[0]);
+}));
+
+r.get("/ai-findings", asyncRoute(async (req, res) => {
+  const status = req.query.status ? String(req.query.status) : null;
+  const { rows } = status
+    ? await pool.query("SELECT * FROM ai_findings WHERE status = $1 ORDER BY created_at DESC", [status])
+    : await pool.query("SELECT * FROM ai_findings ORDER BY created_at DESC");
+  res.json(rows);
+}));
+
+r.post("/ai-findings/:id/promote", asyncRoute(async (req, res) => {
+  const { rows: fr } = await pool.query("SELECT * FROM ai_findings WHERE id = $1", [req.params.id]);
+  if (fr.length === 0) return res.status(404).json({ error: "not found" });
+  const f = fr[0];
+  const dims = f.dims || {};
+  const summaryParts = [];
+  if (f.summary) summaryParts.push(f.summary);
+  const meta = [];
+  if (f.platform) meta.push(f.platform);
+  if (f.author) meta.push(f.author);
+  if (f.sentiment) meta.push("sentiment: " + f.sentiment);
+  if (meta.length) summaryParts.push(meta.join(" · "));
+  const caseCols = {
+    title: (f.title && f.title.trim()) || "AI finding",
+    category: f.category || "Social Media",
+    summary: summaryParts.join("\n\n") || null,
+    status: "Active",
+    expected_impact: f.expected_impact || null,
+    recommended_action: f.recommended_action || null,
+    reference_links: f.source_url || null,
+  };
+  DIMS.forEach((d) => { caseCols[d] = clampDim(dims[d] !== undefined ? dims[d] : 1); });
+  const keys = Object.keys(caseCols);
+  const placeholders = keys.map((_, i) => "$" + (i + 1));
+  const values = keys.map((k) => caseCols[k]);
+  const { rows: cr } = await pool.query(
+    `INSERT INTO crisis_cases (${keys.join(",")}) VALUES (${placeholders.join(",")}) RETURNING *`,
+    values
+  );
+  await pool.query("UPDATE ai_findings SET status = 'promoted', promoted_case_id = $1 WHERE id = $2", [cr[0].id, f.id]);
+  res.status(201).json({ case: cr[0] });
+}));
+
+r.post("/ai-findings/:id/dismiss", asyncRoute(async (req, res) => {
+  const { rowCount } = await pool.query("UPDATE ai_findings SET status = 'dismissed' WHERE id = $1", [req.params.id]);
+  if (rowCount === 0) return res.status(404).json({ error: "not found" });
+  res.json({ ok: true });
+}));
+
+r.delete("/ai-findings/:id", asyncRoute(async (req, res) => {
+  const { rowCount } = await pool.query("DELETE FROM ai_findings WHERE id = $1", [req.params.id]);
+  if (rowCount === 0) return res.status(404).json({ error: "not found" });
+  res.status(204).end();
 }));
 
 /* ------------------------------------------------------------

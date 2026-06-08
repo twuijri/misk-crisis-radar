@@ -291,6 +291,7 @@ body:not(.can-edit) .edit-only{display:none!important}
         <li><button class="menu-item active" data-view="dashboard"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 13h8V3H3zM13 21h8V11h-8zM13 3v6h8V3zM3 17v4h8v-4z"/></svg><span data-i18n="nav_dashboard">لوحة التحكم</span></button></li>
         <li><button class="menu-item" data-view="issues"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg><span data-i18n="nav_issues">جميع القضايا</span></button></li>
         <li><button class="menu-item" data-view="radar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg><span data-i18n="nav_radar">رادار الأزمات</span></button></li>
+        <li><button class="menu-item" data-view="ai"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.9 4.6L18.5 9l-4.6 1.9L12 15l-1.9-4.1L5.5 9l4.6-1.4z"/><path d="M19 14l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></svg><span data-i18n="nav_ai">تحليل الذكاء الاصطناعي</span></button></li>
       </ul>
     </div>
     <div class="sidebar-divider"></div>
@@ -361,6 +362,15 @@ body:not(.can-edit) .edit-only{display:none!important}
       </div>
       <h3 class="section-heading" data-i18n="radar_details">تفاصيل الرادار</h3>
       <div class="issues-container" id="radarIssues"></div>
+    </section>
+
+    <!-- AI ANALYSIS -->
+    <section class="view" id="view-ai">
+      <div class="page-header"><h2 data-i18n="ai_title">تحليل الذكاء الاصطناعي</h2><p data-i18n="ai_sub">تحليلات يولّدها وكيل هرمز من الشبكات الاجتماعية — راجِعها واعتمد ما يستحق ليُنسخ إلى رادار الأزمات</p></div>
+      <div class="toolbar">
+        <button class="btn-soft" id="aiRefreshBtn" data-i18n="ai_refresh">تحديث</button>
+      </div>
+      <div class="issues-container" id="aiFindings"></div>
     </section>
 
     <!-- DETAIL -->
@@ -460,7 +470,14 @@ const I18N = {
     app_title:"Crisis Radar", app_subtitle:"Live perception & risk monitoring", org_name:"Misk Foundation",
     refresh:"Refresh", add_case:"Add case", login:"Login", exit_edit:"Exit editing",
     nav_main:"Main navigation", nav_dashboard:"Dashboard", nav_issues:"All cases", nav_radar:"Crisis Radar",
-    nav_systems:"Systems", nav_library:"Voice of Beneficiaries Library",
+    nav_systems:"Systems", nav_library:"Voice of Beneficiaries Library", nav_ai:"AI Analysis",
+    ai_title:"AI Analysis", ai_sub:"Findings the Hermes agent generated from social media — review them and promote the worthy ones into the Crisis Radar.",
+    ai_refresh:"Refresh", ai_login_needed:"Sign in as an editor to review AI findings.", ai_empty:"No pending AI findings.",
+    ai_crisis_yes:"Crisis", ai_crisis_no:"Not a crisis",
+    ai_sentiment_negative:"Negative", ai_sentiment_neutral:"Neutral", ai_sentiment_positive:"Positive",
+    ai_copy_to_radar:"Copy to radar", ai_dismiss:"Dismiss", ai_open_source:"Open source",
+    ai_confirm_promote:"Copy this AI finding into the Crisis Radar as a new case?", ai_promoted_ok:"Copied into the Crisis Radar.",
+    ai_untitled:"(untitled finding)",
     dash_title:"Dashboard", dash_sub:"Overview of monitored crises and cases",
     stat_total:"Total Cases", stat_high:"High", stat_med:"Medium", stat_low:"Low", stat_esc:"Escalated",
     active_cases:"Active cases",
@@ -528,7 +545,14 @@ const I18N = {
     app_title:"رادار الأزمات", app_subtitle:"رصد حي للانطباع والمخاطر", org_name:"مؤسسة مسك",
     refresh:"تحديث", add_case:"إضافة قضية", login:"دخول", exit_edit:"خروج من التعديل",
     nav_main:"التنقل الرئيسي", nav_dashboard:"لوحة التحكم", nav_issues:"جميع القضايا", nav_radar:"رادار الأزمات",
-    nav_systems:"الأنظمة", nav_library:"مكتبة أصوات المستفيدين",
+    nav_systems:"الأنظمة", nav_library:"مكتبة أصوات المستفيدين", nav_ai:"تحليل الذكاء الاصطناعي",
+    ai_title:"تحليل الذكاء الاصطناعي", ai_sub:"تحليلات يولّدها وكيل هرمز من الشبكات الاجتماعية — راجِعها واعتمد ما يستحق ليُنسخ إلى رادار الأزمات.",
+    ai_refresh:"تحديث", ai_login_needed:"سجّل الدخول كمحرّر لمراجعة تحليلات الذكاء الاصطناعي.", ai_empty:"لا توجد تحليلات قيد المراجعة.",
+    ai_crisis_yes:"أزمة", ai_crisis_no:"ليست أزمة",
+    ai_sentiment_negative:"سلبي", ai_sentiment_neutral:"محايد", ai_sentiment_positive:"إيجابي",
+    ai_copy_to_radar:"نسخ إلى الرادار", ai_dismiss:"تجاهل", ai_open_source:"فتح المصدر",
+    ai_confirm_promote:"نسخ هذا التحليل إلى رادار الأزمات كقضية جديدة؟", ai_promoted_ok:"تم النسخ إلى رادار الأزمات.",
+    ai_untitled:"(تحليل بدون عنوان)",
     dash_title:"لوحة التحكم", dash_sub:"نظرة عامة على حالة الأزمات والقضايا المراقبة حالياً",
     stat_total:"إجمالي الحالات", stat_high:"مرتفع", stat_med:"متوسط", stat_low:"منخفض", stat_esc:"مُصعّدة",
     active_cases:"القضايا النشطة",
@@ -631,8 +655,8 @@ function variantOf(c){ return CLS_VARIANT[clsOf(c)]; }
 
 /* ============ EDITOR LOGIN ============ */
 function updateLoginBtn(){ const b=document.getElementById("loginBtn"); if(!b) return; b.querySelector("span").textContent = editMode ? t("exit_edit") : t("login"); b.classList.toggle("on", editMode); }
-function enterEditMode(){ editMode=true; document.body.classList.add("can-edit"); updateLoginBtn(); render(); if(currentView==="detail"&&currentDetailId) openDetail(currentDetailId); }
-function exitEditMode(){ editMode=false; EDIT_CODE=""; sessionStorage.removeItem("crg_code"); document.body.classList.remove("can-edit"); updateLoginBtn(); render(); if(currentView==="detail"&&currentDetailId) openDetail(currentDetailId); }
+function enterEditMode(){ editMode=true; document.body.classList.add("can-edit"); updateLoginBtn(); render(); if(currentView==="detail"&&currentDetailId) openDetail(currentDetailId); if(currentView==="ai") loadAiFindings(); }
+function exitEditMode(){ editMode=false; EDIT_CODE=""; sessionStorage.removeItem("crg_code"); document.body.classList.remove("can-edit"); updateLoginBtn(); render(); if(currentView==="detail"&&currentDetailId) openDetail(currentDetailId); if(currentView==="ai") renderAiFindings(); }
 function openLogin(){
   if(editMode){ exitEditMode(); return; }
   if(!configured){ enterEditMode(); return; }
@@ -713,6 +737,58 @@ function notesHTML(notes){
   return `<ul class="timeline">`+notes.map(n=>`<li class="timeline-item"><div class="timeline-dot"></div><div><div class="timeline-date">${esc(n.author||t("team"))} · ${fmtDateTime(n.created_at)}</div><div class="timeline-text">${esc(n.note)}</div></div></li>`).join("")+`</ul>`;
 }
 
+/* ============ AI ANALYSIS (Hermes findings queue) ============ */
+let AI_FINDINGS=[];
+async function loadAiFindings(){
+  if(!editMode){ renderAiFindings(); return; }
+  try{ AI_FINDINGS = await api("/ai-findings?status=pending"); }
+  catch(e){ if(handleAuth(e))return; AI_FINDINGS=[]; }
+  renderAiFindings();
+}
+function aiCardHTML(f){
+  const dims=f.dims||{}, cls=clsOf(dims), v=variantOf(dims), sc=compositeScore(dims).toFixed(1);
+  const metrics=DIMENSIONS.map(d=>{ const x=+dims[d.key]||0; return `<div class="metric"><div class="metric-label">${esc(dLabel(d))}</div><div class="metric-bar"><div class="metric-fill" style="width:${x*20}%"></div></div><div class="metric-value">${x}/5</div></div>`; }).join("");
+  const sentColor = f.sentiment==="negative"?"var(--danger)":(f.sentiment==="positive"?"var(--misk-primary)":"var(--text-secondary)");
+  const crisisBadge = f.is_crisis
+    ? `<span class="badge" style="background:var(--danger);color:#fff"><span class="bd"></span>${esc(t("ai_crisis_yes"))}</span>`
+    : `<span class="badge" style="background:#eee;color:#555">${esc(t("ai_crisis_no"))}</span>`;
+  const meta=[f.platform,f.author].filter(Boolean).map(esc).join(" · ");
+  const sum=f.summary?esc(f.summary):"";
+  const link=f.source_url?`<a class="btn" href="${esc(f.source_url)}" target="_blank" rel="noopener">${esc(t("ai_open_source"))}</a>`:"";
+  return `<div class="issue-card ${v}">
+    <div class="issue-header"><div class="issue-title">${esc(f.title||t("ai_untitled"))}</div>${crisisBadge}</div>
+    <div class="issue-meta-row"><span class="st" style="background:transparent;color:${sentColor};border:1px solid ${sentColor}">${esc(t("ai_sentiment_"+(f.sentiment||"neutral")))}</span>${meta?`<span class="cat-tag">${meta}</span>`:""}<span class="badge ${v}"><span class="bd"></span>${clsLabel(cls)} · ${sc}/5</span></div>
+    ${sum?`<div class="issue-summary">${sum}</div>`:""}
+    <div class="metrics-row">${metrics}</div>
+    <div class="action-buttons">
+      ${link}
+      <button class="btn btn-primary grow" type="button" onclick="promoteFinding('${esc(f.id)}')">${esc(t("ai_copy_to_radar"))}</button>
+      <button class="btn btn-danger" type="button" onclick="dismissFinding('${esc(f.id)}')">${esc(t("ai_dismiss"))}</button>
+    </div>
+  </div>`;
+}
+function renderAiFindings(){
+  const el=document.getElementById("aiFindings"); if(!el) return;
+  if(!editMode){
+    el.innerHTML=`<div class="empty-state"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><h3>${esc(t("ai_login_needed"))}</h3><button class="btn btn-primary" type="button" onclick="openLogin()" style="margin-top:.6rem">${esc(t("login"))}</button></div>`;
+    return;
+  }
+  el.innerHTML = AI_FINDINGS.length ? AI_FINDINGS.map(aiCardHTML).join("")
+    : `<div class="empty-state"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3l1.9 4.6L18.5 9l-4.6 1.9L12 15l-1.9-4.1L5.5 9l4.6-1.4z"/></svg><h3>${esc(t("ai_empty"))}</h3></div>`;
+}
+async function promoteFinding(id){
+  if(!confirm(t("ai_confirm_promote"))) return;
+  try{ await api("/ai-findings/"+id+"/promote",{method:"POST"}); }
+  catch(e){ if(handleAuth(e))return; alert(e.message); return; }
+  alert(t("ai_promoted_ok"));
+  await loadAiFindings(); await loadCases();
+}
+async function dismissFinding(id){
+  try{ await api("/ai-findings/"+id+"/dismiss",{method:"POST"}); }
+  catch(e){ if(handleAuth(e))return; alert(e.message); return; }
+  await loadAiFindings();
+}
+
 /* ============ VIEW SWITCHING ============ */
 function showView(name){
   currentView=name;
@@ -721,6 +797,7 @@ function showView(name){
   document.querySelectorAll(".menu-item").forEach(b=>b.classList.toggle("active", b.dataset.view===name));
   document.getElementById("sidebar").classList.remove("open");
   if(name==="radar") renderRadar();
+  if(name==="ai") loadAiFindings();
   window.scrollTo({top:0,behavior:"smooth"});
 }
 function backToList(){ currentDetailId=null; selectedId=null; renderRadar(); showView(lastListView==="detail"?"dashboard":lastListView); render(); }
@@ -1147,6 +1224,7 @@ function applyLang(){
   if(document.getElementById("dimFields").dataset.built){ rebuildDimFields(); fillFormSelects(); }
   render();
   if(currentView==="detail"&&currentDetailId) openDetail(currentDetailId);
+  if(currentView==="ai") renderAiFindings();
 }
 
 /* ============ UTILITIES ============ */
@@ -1165,6 +1243,7 @@ document.getElementById("refreshBtn").onclick=loadCases;
 document.getElementById("saveBtn").onclick=saveCase;
 document.getElementById("exportBtn").onclick=exportCSV;
 document.getElementById("portfolioBtn").onclick=()=>{selectedId=null;renderRadar();};
+document.getElementById("aiRefreshBtn").onclick=loadAiFindings;
 document.getElementById("hideResolved").onchange=()=>{renderRadar();};
 document.getElementById("searchInput").addEventListener("input",e=>{searchTerm=e.target.value.toLowerCase();renderLists();});
 document.getElementById("langBtn").onclick=()=>{ LANG = LANG==="ar"?"en":"ar"; applyLang(); };
