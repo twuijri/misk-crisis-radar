@@ -1415,10 +1415,9 @@ function QuoteEditor({ ctx, quote, onSave, onDelete, onClose }) {
         <ThemeEditor themes={vocab.themes} selected={f.themes} toggle={toggleTheme} mutateVocab={mutateVocab} lang={lang} t={t} />
       </Field>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
         <Field label={t("impact")}><EditableSelect value={f.impactLevel} onChange={(v) => set("impactLevel", v)} list={vocab.impactLevels} listName="impactLevels" mutateVocab={mutateVocab} lang={lang} isAr={isAr} t={t} placeholder="—" /></Field>
         <Field label={t("engagement")}><EditableSelect value={f.engagementLevel} onChange={(v) => set("engagementLevel", v)} list={vocab.engagementLevels} listName="engagementLevels" mutateVocab={mutateVocab} lang={lang} isAr={isAr} t={t} placeholder="—" /></Field>
-        <Field label={t("classification")}><LevelSelect value={f.classification} onChange={(v) => set("classification", v)} t={t} /></Field>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -1618,7 +1617,8 @@ function Considerations({ ctx }) {
 function Reports({ ctx }) {
   const { scored, vocab, insights, considerations, t, isAr } = ctx;
   const [cadence, setCadence] = useState("Monthly");
-  const [format, setFormat] = useState("LeadershipBrief");
+  // Report format selector was removed; always build the full report.
+  const [format] = useState("FullReport");
   const [rlang, setRlang] = useState("ar");
   const [built, setBuilt] = useState(null);
   const [sections, setSections] = useState({ intro: false, metrics: true, quotes: true, highImpact: true, themes: true, insights: true, considerations: true, appendix: false });
@@ -1723,9 +1723,8 @@ function Reports({ ctx }) {
   return (
     <div>
       <Card className="no-print" style={{ padding: 18, marginBottom: 16 }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 18 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18 }}>
           <div><div style={{ fontSize: 12, fontWeight: 600, color: C.green, marginBottom: 7 }}>{t("reportType")}</div><Opt value={cadence} setValue={setCadence} options={["Weekly", "Monthly", "Quarterly", "Annual"]} /></div>
-          <div><div style={{ fontSize: 12, fontWeight: 600, color: C.green, marginBottom: 7 }}>{t("reportFormat")}</div><Opt value={format} setValue={setFormat} options={["ExecSummary", "LeadershipBrief", "FullReport"]} /></div>
           <div><div style={{ fontSize: 12, fontWeight: 600, color: C.green, marginBottom: 7 }}>{t("reportLang")}</div>
             <div style={{ display: "flex", gap: 6 }}>
               {["ar", "en"].map((l) => <button key={l} onClick={() => setRlang(l)} className="vobl-pill" style={{ background: rlang === l ? C.green : C.mist, color: rlang === l ? "#fff" : C.ink }}>{l === "ar" ? "العربية" : "English"}</button>)}
@@ -1784,7 +1783,7 @@ const ReportPreview = React.memo(function ReportPreview({ built, vocab }) {
         <div style={{ position: "absolute", top: 0, [isAr ? "left" : "right"]: 0, width: 140, height: 70, background: `repeating-linear-gradient(115deg, ${C.lime} 0 9px, transparent 9px 20px)`, opacity: 0.9 }} />
         <div style={{ fontSize: 11, color: C.lime, fontWeight: 700, letterSpacing: isAr ? 0 : 1 }}>{isAr ? "مؤسسة مسك · الاتصال المؤسسي" : "MISK FOUNDATION · CORPORATE COMMUNICATIONS"}</div>
         <div style={{ fontSize: 23, fontWeight: 700, marginTop: 8 }}>{L("appName")}</div>
-        <div style={{ fontSize: 14, color: C.tealSoft, marginTop: 4 }}>{L(built.cadence)} · {L(built.format)}</div>
+        <div style={{ fontSize: 14, color: C.tealSoft, marginTop: 4 }}>{L(built.cadence)}</div>
         <div style={{ fontSize: 11.5, color: C.tealSoft, marginTop: 10 }}>{L("period")}: {built.cadence} · {built.generatedAt}</div>
       </div>
 
@@ -1792,6 +1791,22 @@ const ReportPreview = React.memo(function ReportPreview({ built, vocab }) {
         {/* intro */}
         {S.intro && built.intro && (
           <div style={{ marginBottom: 24, fontSize: 13.5, lineHeight: 1.9, color: C.ink, whiteSpace: "pre-wrap" }}>{built.intro}</div>
+        )}
+
+        {/* high-impact quotes — featured first, on a green panel */}
+        {S.highImpact && (built.highQuotes || []).length > 0 && (
+          <div style={{ background: C.quote, borderRadius: 12, padding: "20px 22px", marginBottom: 24, position: "relative", overflow: "hidden" }}>
+            <div style={{ position: "absolute", top: 0, [isAr ? "left" : "right"]: 0, width: 100, height: 54, background: `repeating-linear-gradient(115deg, ${C.lime} 0 7px, transparent 7px 16px)`, opacity: 0.55 }} />
+            <div style={{ fontSize: 14, fontWeight: 700, color: C.lime, marginBottom: 14, position: "relative" }}>{UI.highImpact[l]}</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14, position: "relative" }}>
+              {built.highQuotes.map((q) => (
+                <div key={q.id} style={{ borderInlineStart: `3px solid ${C.lime}`, paddingInlineStart: 14 }}>
+                  <div style={{ fontSize: 14.5, lineHeight: 1.8, color: "#fff", fontWeight: 500 }}>“{qt(q, l)}”</div>
+                  <div style={{ fontSize: 12, color: C.tealSoft, marginTop: 6 }}>— {q["sourceName_" + l] || q.sourceName_ar} · {Lv(vocab.sourceTypes, q.sourceType, l)} · {Lv(vocab.programs, q.program, l)}</div>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
 
         {/* metrics */}
@@ -1818,19 +1833,6 @@ const ReportPreview = React.memo(function ReportPreview({ built, vocab }) {
               </div>
             ))}
             {!built.quotes.length && <div style={{ color: C.muted, fontSize: 13 }}>{UI.noData[l]}</div>}
-          </div>
-        </>}
-
-        {/* high-impact quotes — the actual quote text behind the metric */}
-        {S.highImpact && (built.highQuotes || []).length > 0 && <>
-          <H>{UI.highImpact[l]}</H>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 24 }}>
-            {built.highQuotes.map((q) => (
-              <div key={q.id} style={{ borderInlineStart: `3px solid ${C.amber}`, paddingInlineStart: 14, paddingTop: 2, paddingBottom: 2 }}>
-                <div style={{ fontSize: 14.5, lineHeight: 1.8, color: C.ink, fontWeight: 500 }}>“{qt(q, l)}”</div>
-                <div style={{ fontSize: 12, color: C.muted, marginTop: 6 }}>— {q["sourceName_" + l] || q.sourceName_ar} · {Lv(vocab.sourceTypes, q.sourceType, l)} · {Lv(vocab.programs, q.program, l)}</div>
-              </div>
-            ))}
           </div>
         </>}
 
