@@ -49,7 +49,7 @@ const C = {
 /* ---------------------- bilingual UI strings ---------------------- */
 const UI = {
   appName: { ar: "مكتبة أصوات المستفيدين", en: "Voice of Beneficiaries Library" },
-  appSub: { ar: "الاتصال الاستراتيجي · مؤسسة مسك", en: "Strategic Communications · Misk Foundation" },
+  appSub: { ar: "الاتصال المؤسسي · مؤسسة مسك", en: "Corporate Communications · Misk Foundation" },
   dashboard: { ar: "لوحة المعلومات", en: "Dashboard" },
   library: { ar: "مكتبة الاقتباسات", en: "Quote Library" },
   themes: { ar: "الموضوعات والرؤى", en: "Themes & Insights" },
@@ -64,6 +64,7 @@ const UI = {
   verified: { ar: "اقتباسات موثّقة", en: "Verified Quotes" },
   topPrograms: { ar: "أكثر البرامج ذكراً", en: "Most Mentioned Programs" },
   topThemes: { ar: "أكثر الموضوعات ذكراً", en: "Most Mentioned Themes" },
+  topEntities: { ar: "أكثر الجهات ذكراً", en: "Most Mentioned Entities" },
   qotw: { ar: "اقتباس الأسبوع", en: "Quote of the Week" },
   recent: { ar: "أحدث الإضافات", en: "Recent Additions" },
   addQuote: { ar: "إضافة اقتباس", en: "Add Quote" },
@@ -1620,7 +1621,7 @@ function Reports({ ctx }) {
   const [format, setFormat] = useState("LeadershipBrief");
   const [rlang, setRlang] = useState("ar");
   const [built, setBuilt] = useState(null);
-  const [sections, setSections] = useState({ intro: false, metrics: true, quotes: true, themes: true, insights: true, considerations: true, appendix: false });
+  const [sections, setSections] = useState({ intro: false, metrics: true, quotes: true, highImpact: true, themes: true, insights: true, considerations: true, appendix: false });
   const [intro, setIntro] = useState("");
   const [editable, setEditable] = useState(false);
   const [pdfBusy, setPdfBusy] = useState(false);
@@ -1649,6 +1650,8 @@ function Reports({ ctx }) {
     const curated = [...inPeriod].sort((a, b) => b._score - a._score);
     const limit = format === "ExecSummary" ? 4 : format === "LeadershipBrief" ? 8 : curated.length;
     const themeFreq = freqBy(inPeriod, (q) => q.themes).slice(0, 6);
+    const entityFreq = freqBy(inPeriod, (q) => q.entity).slice(0, 6);
+    const highQuotes = [...inPeriod].filter((q) => q.impactLevel === "High").sort((a, b) => b._score - a._score);
     setEditable(false);
     setBuilt({
       cadence, format, rlang,
@@ -1658,10 +1661,12 @@ function Reports({ ctx }) {
       metrics: {
         total: inPeriod.length,
         sources: new Set(inPeriod.map((q) => q.sourceName_ar)).size,
-        highImpact: inPeriod.filter((q) => q.impactLevel === "High").length,
+        highImpact: highQuotes.length,
       },
       quotes: curated.slice(0, limit),
+      highQuotes,
       themeFreq,
+      entityFreq,
       insights: insights.filter((i) => i.status === "Verified"),
       considerations: considerations.filter((c) => c.status === "Verified"),
     });
@@ -1712,7 +1717,7 @@ function Reports({ ctx }) {
 
   const sectionDefs = [
     ["intro", t("secIntro")], ["metrics", t("secMetrics")], ["quotes", t("secQuotes")],
-    ["themes", t("secThemes")], ["insights", t("secInsights")], ["considerations", t("secConsiderations")], ["appendix", t("secAppendix")],
+    ["highImpact", t("highImpact")], ["themes", t("secThemes")], ["insights", t("secInsights")], ["considerations", t("secConsiderations")], ["appendix", t("secAppendix")],
   ];
 
   return (
@@ -1767,7 +1772,9 @@ const ReportPreview = React.memo(function ReportPreview({ built, vocab }) {
   const isAr = l === "ar";
   const L = (k) => UI[k][l];
   const maxTheme = built.themeFreq[0]?.[1] || 1;
-  const S = built.sections || { metrics: true, quotes: true, themes: true, insights: true, considerations: true, appendix: false, intro: false };
+  const entityFreq = built.entityFreq || [];
+  const maxEntity = entityFreq[0]?.[1] || 1;
+  const S = built.sections || { metrics: true, quotes: true, highImpact: true, themes: true, insights: true, considerations: true, appendix: false, intro: false };
   const H = ({ children }) => <div style={{ fontSize: 14, fontWeight: 700, color: C.green, marginBottom: 12 }}>{children}</div>;
   return (
    <div style={{ maxWidth: 820, margin: "0 auto" }}>
@@ -1775,7 +1782,7 @@ const ReportPreview = React.memo(function ReportPreview({ built, vocab }) {
       {/* cover band */}
       <div style={{ background: C.quote, color: "#fff", padding: "26px 30px", position: "relative", overflow: "hidden" }}>
         <div style={{ position: "absolute", top: 0, [isAr ? "left" : "right"]: 0, width: 140, height: 70, background: `repeating-linear-gradient(115deg, ${C.lime} 0 9px, transparent 9px 20px)`, opacity: 0.9 }} />
-        <div style={{ fontSize: 11, color: C.lime, fontWeight: 700, letterSpacing: isAr ? 0 : 1 }}>{isAr ? "مؤسسة مسك · الاتصال الاستراتيجي" : "MISK FOUNDATION · STRATEGIC COMMUNICATIONS"}</div>
+        <div style={{ fontSize: 11, color: C.lime, fontWeight: 700, letterSpacing: isAr ? 0 : 1 }}>{isAr ? "مؤسسة مسك · الاتصال المؤسسي" : "MISK FOUNDATION · CORPORATE COMMUNICATIONS"}</div>
         <div style={{ fontSize: 23, fontWeight: 700, marginTop: 8 }}>{L("appName")}</div>
         <div style={{ fontSize: 14, color: C.tealSoft, marginTop: 4 }}>{L(built.cadence)} · {L(built.format)}</div>
         <div style={{ fontSize: 11.5, color: C.tealSoft, marginTop: 10 }}>{L("period")}: {built.cadence} · {built.generatedAt}</div>
@@ -1814,11 +1821,32 @@ const ReportPreview = React.memo(function ReportPreview({ built, vocab }) {
           </div>
         </>}
 
-        {/* themes */}
+        {/* high-impact quotes — the actual quote text behind the metric */}
+        {S.highImpact && (built.highQuotes || []).length > 0 && <>
+          <H>{UI.highImpact[l]}</H>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 24 }}>
+            {built.highQuotes.map((q) => (
+              <div key={q.id} style={{ borderInlineStart: `3px solid ${C.amber}`, paddingInlineStart: 14, paddingTop: 2, paddingBottom: 2 }}>
+                <div style={{ fontSize: 14.5, lineHeight: 1.8, color: C.ink, fontWeight: 500 }}>“{qt(q, l)}”</div>
+                <div style={{ fontSize: 12, color: C.muted, marginTop: 6 }}>— {q["sourceName_" + l] || q.sourceName_ar} · {Lv(vocab.sourceTypes, q.sourceType, l)} · {Lv(vocab.programs, q.program, l)}</div>
+              </div>
+            ))}
+          </div>
+        </>}
+
+        {/* themes + entities, side by side */}
         {S.themes && <>
-          <H>{UI.topThemes[l]}</H>
-          <div style={{ marginBottom: 24 }}>
-            {built.themeFreq.map(([k, v]) => <Bar key={k} label={Lv(vocab.themes, k, l)} value={v} max={maxTheme} color={C.teal} />)}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 28, marginBottom: 24, alignItems: "start" }}>
+            <div>
+              <H>{UI.topThemes[l]}</H>
+              {built.themeFreq.map(([k, v]) => <Bar key={k} label={Lv(vocab.themes, k, l)} value={v} max={maxTheme} color={C.teal} />)}
+              {!built.themeFreq.length && <div style={{ color: C.muted, fontSize: 13 }}>{UI.noData[l]}</div>}
+            </div>
+            <div>
+              <H>{UI.topEntities[l]}</H>
+              {entityFreq.map(([k, v]) => <Bar key={k} label={Lv(vocab.entities, k, l)} value={v} max={maxEntity} color={C.green} />)}
+              {!entityFreq.length && <div style={{ color: C.muted, fontSize: 13 }}>{UI.noData[l]}</div>}
+            </div>
           </div>
         </>}
 
