@@ -756,6 +756,12 @@ export default function App({ canEdit = false, onAuthExpired, onLogout, onReques
               </button>
             );
           })}
+          <div style={{ height: 1, background: C.greenLine, margin: "10px 6px" }} />
+          <a href="/" className="vobl-nav"
+            style={{ display: "flex", alignItems: "center", gap: 11, width: "100%", padding: "10px 12px", marginBottom: 3, borderRadius: 9, textDecoration: "none", textAlign: isAr ? "right" : "left", color: C.tealSoft, fontFamily: "inherit", fontSize: 13.5, fontWeight: 500 }}>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5" /><circle cx="12" cy="12" r="1.5" /></svg>
+            <span>{isAr ? "رادار الأزمات" : "Crisis Radar"}</span>
+          </a>
         </nav>
         <div style={{ padding: 14, borderTop: `1px solid ${C.greenLine}`, fontSize: 10.5, color: C.tealSoft }}>
           {isAr ? `النسخة ${APP_VERSION}` : `Version ${APP_VERSION}`}
@@ -772,10 +778,6 @@ export default function App({ canEdit = false, onAuthExpired, onLogout, onReques
             <div style={{ fontSize: 11.5, color: C.muted }}>{t("appSub")}</div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <a href="/" className="vobl-btn-ghost" title={isAr ? "العودة إلى رادار الأزمات" : "Back to Crisis Radar"}
-              style={{ display: "flex", alignItems: "center", gap: 6, textDecoration: "none" }}>
-              <ArrowLeft size={15} style={{ transform: isAr ? "scaleX(-1)" : "none" }} /> {isAr ? "الرادار" : "Radar"}
-            </a>
             <button onClick={() => setLang(isAr ? "en" : "ar")} className="vobl-btn-ghost" title="Toggle language"
               style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <Globe size={15} /> {isAr ? "EN" : "ع"}
