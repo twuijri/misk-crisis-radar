@@ -62,7 +62,11 @@ a{color:var(--misk-primary)}
 .main{flex:1;min-width:0;display:flex;flex-direction:column;min-height:100vh}
 
 /* ============ TOPBAR ============ */
-.topbar{display:flex;justify-content:flex-end;align-items:center;gap:.6rem;flex-wrap:wrap;background:var(--white);border-bottom:1px solid var(--border-color);padding:.8rem 1.5rem;position:sticky;top:0;z-index:100}
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;background:var(--white);border-bottom:1px solid var(--border-color);padding:.8rem 1.5rem;position:sticky;top:0;z-index:100}
+.topbar-title{display:flex;align-items:center;gap:.6rem;min-width:0}
+.topbar-title h2{font-size:17px;font-weight:700;color:var(--misk-primary);line-height:1.2}
+.topbar-title p{font-size:11.5px;color:var(--text-secondary)}
+.topbar-actions{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap}
 .live{display:flex;align-items:center;gap:7px;font-size:.78rem;color:var(--text-secondary);font-weight:600;background:var(--misk-light);padding:6px 11px;border-radius:999px;border:1px solid var(--border-color)}
 .live .dot{height:8px;width:8px;border-radius:50%;background:var(--misk-teal);animation:pulse 2.2s infinite}
 .live.off .dot{background:var(--warning);animation:none}
@@ -72,14 +76,14 @@ a{color:var(--misk-primary)}
 .hbtn.login.on{background:#1B7D5C;border-color:transparent;color:#fff}
 .hbtn.add{background:#1B7D5C;border-color:transparent;color:#fff}
 .hbtn.add:hover{filter:brightness(1.08);color:#fff;border-color:transparent}
-.nav-toggle{display:none;color:#1B7D5C;padding:6px;background:none;border:none;cursor:pointer;margin-inline-end:auto}
+.nav-toggle{display:none;color:#1B7D5C;padding:6px;background:none;border:none;cursor:pointer}
 .nav-toggle svg{display:block}
 .content{flex:1;padding:1.85rem;overflow-x:hidden;min-width:0}
 
 .view{display:none;animation:fadeIn .25s ease}
 .view.active{display:block}
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-.page-header{margin-bottom:1.5rem}
+.page-header{display:none}
 .page-header h2{font-size:1.6rem;font-weight:700;color:var(--misk-primary);margin-bottom:.3rem}
 .page-header p{color:var(--text-secondary);font-size:.92rem}
 .section-heading{margin:0 0 1.1rem;color:var(--misk-primary);font-size:1.15rem;font-weight:700}
@@ -284,7 +288,7 @@ body:not(.can-edit) .edit-only{display:none!important}
         <img id="miskLogo" alt="" src="" style="display:none" />
       </div>
       <h1 data-i18n="app_title">رادار الأزمات</h1>
-      <p><span data-i18n="org_name">مؤسسة مسك</span> · Crisis Radar</p>
+      <p data-i18n="brand_sub">الاتصال المؤسسي · مؤسسة مسك</p>
     </div>
     <nav class="sidebar-nav">
     <div class="sidebar-section">
@@ -308,12 +312,20 @@ body:not(.can-edit) .edit-only{display:none!important}
   <!-- ================= MAIN ================= -->
   <main class="main">
     <header class="topbar">
-      <button class="nav-toggle" id="navToggle" aria-label="menu"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
-      <div class="live off" id="liveBadge"><span class="dot"></span><span id="liveText" data-i18n="live_connecting">…</span></div>
-      <button class="hbtn" id="refreshBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6"/></svg><span data-i18n="refresh">Refresh</span></button>
-      <button class="hbtn" id="langBtn">EN</button>
-      <button class="hbtn login" id="loginBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg><span data-i18n="login">دخول</span></button>
-      <button class="hbtn add edit-only" id="addBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M12 5v14M5 12h14"/></svg><span data-i18n="add_case">إضافة قضية</span></button>
+      <div class="topbar-title">
+        <button class="nav-toggle" id="navToggle" aria-label="menu"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+        <div>
+          <h2 id="topbarTitle" data-i18n="nav_dashboard">لوحة التحكم</h2>
+          <p data-i18n="brand_sub">الاتصال المؤسسي · مؤسسة مسك</p>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <div class="live off" id="liveBadge"><span class="dot"></span><span id="liveText" data-i18n="live_connecting">…</span></div>
+        <button class="hbtn" id="refreshBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6"/></svg><span data-i18n="refresh">Refresh</span></button>
+        <button class="hbtn" id="langBtn">EN</button>
+        <button class="hbtn login" id="loginBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg><span data-i18n="login">دخول</span></button>
+        <button class="hbtn add edit-only" id="addBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M12 5v14M5 12h14"/></svg><span data-i18n="add_case">إضافة قضية</span></button>
+      </div>
     </header>
     <div class="content">
     <div class="cfg" id="cfgBanner" data-i18n-html="cfg_banner"></div>
@@ -474,7 +486,7 @@ const CLS_VARIANT = {High:"critical",Medium:"warning",Low:"info"};
    ============================================================ */
 const I18N = {
   en: {
-    app_title:"Crisis Radar", app_subtitle:"Live perception & risk monitoring", org_name:"Misk Foundation",
+    app_title:"Crisis Radar", app_subtitle:"Live perception & risk monitoring", org_name:"Misk Foundation", brand_sub:"Corporate Communications · Misk Foundation",
     refresh:"Refresh", add_case:"Add case", login:"Login", exit_edit:"Exit editing",
     nav_main:"Main navigation", nav_dashboard:"Dashboard", nav_issues:"All cases", nav_radar:"Crisis Radar",
     nav_systems:"Systems", nav_library:"Voice of Beneficiaries Library", nav_ai:"AI Analysis",
@@ -549,7 +561,7 @@ const I18N = {
     adv:{ "Info":"For information only", "FollowUp":"Requires follow-up", "Decision":"Requires decision or direction" }
   },
   ar: {
-    app_title:"رادار الأزمات", app_subtitle:"رصد حي للانطباع والمخاطر", org_name:"مؤسسة مسك",
+    app_title:"رادار الأزمات", app_subtitle:"رصد حي للانطباع والمخاطر", org_name:"مؤسسة مسك", brand_sub:"الاتصال المؤسسي · مؤسسة مسك",
     refresh:"تحديث", add_case:"إضافة قضية", login:"دخول", exit_edit:"خروج من التعديل",
     nav_main:"التنقل الرئيسي", nav_dashboard:"لوحة التحكم", nav_issues:"جميع القضايا", nav_radar:"رادار الأزمات",
     nav_systems:"الأنظمة", nav_library:"مكتبة أصوات المستفيدين", nav_ai:"تحليل الذكاء الاصطناعي",
@@ -803,6 +815,10 @@ function showView(name){
   document.querySelectorAll(".view").forEach(v=>v.classList.toggle("active", v.id==="view-"+name));
   document.querySelectorAll(".menu-item").forEach(b=>b.classList.toggle("active", b.dataset.view===name));
   document.getElementById("sidebar").classList.remove("open");
+  const titleKeys={dashboard:"nav_dashboard",issues:"nav_issues",radar:"nav_radar",ai:"nav_ai",detail:"nav_issues"};
+  const tk=titleKeys[name]||"nav_dashboard";
+  const tt=document.getElementById("topbarTitle");
+  if(tt){ tt.setAttribute("data-i18n",tk); tt.textContent=t(tk); }
   if(name==="radar") renderRadar();
   if(name==="ai") loadAiFindings();
   window.scrollTo({top:0,behavior:"smooth"});

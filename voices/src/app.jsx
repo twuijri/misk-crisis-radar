@@ -1204,7 +1204,7 @@ function Dashboard({ ctx, setView }) {
         </Card>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1.1fr 1fr", gap: 14 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1.1fr 1fr", gap: 14, alignItems: "start" }}>
         {/* Quote of the week */}
         <div style={{ background: C.quote, borderRadius: 13, padding: 22, color: "#fff", position: "relative", overflow: "hidden" }}>
           <div style={{ position: "absolute", bottom: -10, [isAr ? "left" : "right"]: 16, display: "flex", gap: 6, opacity: 0.5 }}>
