@@ -34,38 +34,44 @@ button{font-family:inherit;cursor:pointer;border:none;background:none}
 input,select,textarea{font-family:inherit}
 a{color:var(--misk-primary)}
 
-/* ============ HEADER ============ */
-.header{background:var(--white);border-bottom:1px solid var(--border-color);padding:1rem 1.75rem;position:sticky;top:0;z-index:100;box-shadow:var(--shadow-sm);display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap}
-.header-left{display:flex;align-items:center;gap:1rem}
-.logo-section{display:flex;align-items:center;gap:.85rem}
-.logo-img{width:46px;height:46px;border-radius:var(--radius-md);background:linear-gradient(135deg,var(--misk-primary),var(--misk-teal));display:flex;align-items:center;justify-content:center;color:var(--white);font-weight:700;font-size:1.4rem;flex:0 0 auto}
-.logo-text h1{font-size:1.05rem;font-weight:700;color:var(--misk-primary);line-height:1.2}
-.logo-text p{font-size:.72rem;color:var(--text-secondary)}
-.header-right{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap}
+/* ============ SHELL + SIDEBAR (unified Misk identity) ============ */
+.shell{display:flex;min-height:100vh}
+.sidebar{width:264px;background:#1B7D5C;color:#fff;display:flex;flex-direction:column;flex:0 0 auto;overflow-y:auto;position:sticky;top:0;height:100vh;align-self:flex-start}
+.brand{position:relative;padding:1.2rem 1.15rem 1.05rem;border-bottom:1px solid #2E9476;overflow:hidden}
+.brand .stripes{position:absolute;top:0;inset-inline-end:0;width:92px;height:60px;background:repeating-linear-gradient(115deg,#C4D600 0 7px,transparent 7px 16px);opacity:.85}
+[dir="rtl"] .brand .stripes{transform:scaleX(-1)}
+.brand-logo{display:inline-flex;align-items:center;justify-content:center;width:46px;height:46px}
+.brand-logo img{width:42px;height:42px;object-fit:contain;border-radius:9px;background:#fff;padding:3px}
+.brand h1{font-size:1rem;font-weight:700;color:#fff;line-height:1.25;margin-top:.65rem}
+.brand p{font-size:.72rem;color:#9FD9CB;margin-top:.15rem}
+.sidebar-nav{padding:.8rem;flex:1;display:flex;flex-direction:column}
+.sidebar-section{margin-bottom:1rem}
+.sidebar-title{font-size:.66rem;font-weight:700;text-transform:uppercase;color:#9FD9CB;letter-spacing:.5px;margin-bottom:.5rem;padding:0 .7rem}
+.sidebar-menu{list-style:none}
+.sidebar-menu li{margin-bottom:.25rem}
+.menu-item{position:relative;width:100%;text-align:start;padding:.62rem .8rem;background:transparent;border:none;border-radius:9px;color:#9FD9CB;font-size:.88rem;font-weight:500;transition:.15s;display:flex;align-items:center;gap:.65rem;text-decoration:none;cursor:pointer}
+.menu-item:hover{background:#146145;color:#fff}
+.menu-item.active{background:#146145;color:#fff;font-weight:600}
+.menu-item.active::before{content:"";position:absolute;inset-inline-start:0;top:8px;bottom:8px;width:3px;border-radius:3px;background:#C4D600}
+.menu-item svg{flex:0 0 auto;color:inherit}
+.menu-item.active svg{color:#C4D600}
+.sidebar-divider{height:1px;background:#2E9476;margin:.4rem .4rem .9rem}
+.btn-add-issue{width:100%;padding:.7rem 1rem;background:#C4D600;color:#0F3D30;border:none;border-radius:9px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:.6rem;font-size:.9rem;transition:.2s;cursor:pointer}
+.btn-add-issue:hover{filter:brightness(1.06)}
+.sidebar-foot{padding:.85rem 1.1rem;border-top:1px solid #2E9476;font-size:.66rem;color:#9FD9CB}
+.main{flex:1;min-width:0;display:flex;flex-direction:column;min-height:100vh}
+
+/* ============ TOPBAR ============ */
+.topbar{display:flex;justify-content:flex-end;align-items:center;gap:.6rem;flex-wrap:wrap;background:var(--white);border-bottom:1px solid var(--border-color);padding:.8rem 1.5rem;position:sticky;top:0;z-index:100}
 .live{display:flex;align-items:center;gap:7px;font-size:.78rem;color:var(--text-secondary);font-weight:600;background:var(--misk-light);padding:6px 11px;border-radius:999px;border:1px solid var(--border-color)}
 .live .dot{height:8px;width:8px;border-radius:50%;background:var(--misk-teal);animation:pulse 2.2s infinite}
 .live.off .dot{background:var(--warning);animation:none}
 @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(45,184,159,.5)}70%{box-shadow:0 0 0 8px rgba(45,184,159,0)}100%{box-shadow:0 0 0 0 rgba(45,184,159,0)}}
-.hbtn{display:inline-flex;align-items:center;gap:7px;font-weight:600;font-size:.82rem;padding:8px 13px;border-radius:var(--radius-md);border:1px solid var(--border-color);background:var(--white);color:var(--text-primary);transition:.18s}
+.hbtn{display:inline-flex;align-items:center;gap:7px;font-weight:600;font-size:.82rem;padding:8px 13px;border-radius:var(--radius-md);border:1px solid var(--border-color);background:var(--white);color:var(--text-primary);transition:.18s;cursor:pointer}
 .hbtn:hover{border-color:var(--misk-teal);color:var(--misk-teal)}
-.hbtn.login.on{background:linear-gradient(135deg,var(--misk-primary),var(--misk-teal));border-color:transparent;color:var(--white)}
-.nav-toggle{display:none;color:var(--misk-primary);padding:6px}
+.hbtn.login.on{background:#1B7D5C;border-color:transparent;color:#fff}
+.nav-toggle{display:none;color:#1B7D5C;padding:6px;background:none;border:none;cursor:pointer;margin-inline-end:auto}
 .nav-toggle svg{display:block}
-
-/* ============ LAYOUT ============ */
-.main-wrapper{display:flex;min-height:calc(100vh - 79px)}
-.sidebar{width:264px;background:var(--white);border-inline-end:1px solid var(--border-color);padding:1.75rem 1.25rem;overflow-y:auto;flex:0 0 auto}
-.sidebar-section{margin-bottom:1.5rem}
-.sidebar-title{font-size:.7rem;font-weight:700;text-transform:uppercase;color:var(--text-secondary);letter-spacing:.5px;margin-bottom:.85rem;padding:0 .85rem}
-.sidebar-menu{list-style:none}
-.sidebar-menu li{margin-bottom:.4rem}
-.menu-item{width:100%;text-align:start;padding:.7rem .9rem;background:transparent;border:1px solid transparent;border-radius:var(--radius-md);color:var(--text-secondary);font-size:.9rem;font-weight:600;transition:.18s;display:flex;align-items:center;gap:.7rem}
-.menu-item:hover{background:rgba(45,184,159,.08);color:var(--misk-teal)}
-.menu-item.active{background:rgba(27,125,92,.1);color:var(--misk-primary);border-color:var(--misk-primary)}
-.menu-item svg{flex:0 0 auto}
-.sidebar-divider{height:1px;background:var(--border-color);margin:1.25rem 0}
-.btn-add-issue{width:100%;padding:.7rem 1rem;background:linear-gradient(135deg,var(--misk-primary),var(--misk-teal));color:var(--white);border-radius:var(--radius-md);font-weight:700;display:flex;align-items:center;justify-content:center;gap:.6rem;font-size:.9rem;transition:.25s}
-.btn-add-issue:hover{box-shadow:var(--shadow-md);transform:translateY(-2px)}
 .content{flex:1;padding:1.85rem;overflow-x:hidden;min-width:0}
 
 .view{display:none;animation:fadeIn .25s ease}
@@ -250,9 +256,9 @@ body:not(.can-edit) .edit-only{display:none!important}
 
 @media(max-width:880px){
   .nav-toggle{display:inline-flex}
-  .main-wrapper{flex-direction:column}
-  .sidebar{width:100%;border-inline-end:none;border-bottom:1px solid var(--border-color);display:none}
-  .sidebar.open{display:block}
+  .shell{flex-direction:column}
+  .sidebar{width:100%;display:none;position:static;height:auto}
+  .sidebar.open{display:flex}
   .radar-container{grid-template-columns:1fr}
   .content{padding:1.25rem}
   .metrics-row{grid-template-columns:repeat(2,1fr)}
@@ -265,26 +271,20 @@ body:not(.can-edit) .edit-only{display:none!important}
 </head>
 <body>
 
-<!-- ================= HEADER ================= -->
-<header class="header">
-  <div class="header-left">
-    <button class="nav-toggle" id="navToggle" aria-label="menu"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
-    <div class="logo-section">
-      <div class="logo-img"><img id="miskLogo" alt="" src="" style="width:100%;height:100%;object-fit:contain;border-radius:var(--radius-md)" onerror="this.style.display='none';this.parentNode.textContent='م'" /></div>
-      <div class="logo-text"><h1 data-i18n="app_title">رادار الأزمات</h1><p><span data-i18n="org_name">مؤسسة مسك</span> · Crisis Radar</p></div>
-    </div>
-  </div>
-  <div class="header-right">
-    <div class="live off" id="liveBadge"><span class="dot"></span><span id="liveText" data-i18n="live_connecting">…</span></div>
-    <button class="hbtn" id="refreshBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6"/></svg><span data-i18n="refresh">Refresh</span></button>
-    <button class="hbtn" id="langBtn">EN</button>
-    <button class="hbtn login" id="loginBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg><span data-i18n="login">دخول</span></button>
-  </div>
-</header>
-
-<div class="main-wrapper">
+<!-- ================= SHELL ================= -->
+<div class="shell">
   <!-- ================= SIDEBAR ================= -->
   <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="stripes"></div>
+      <div class="brand-logo">
+        <svg id="brandDots" width="42" height="42" viewBox="0 0 36 40" aria-hidden="true"><circle cx="18" cy="6" r="3.1" fill="#C4D600" opacity=".9"/><circle cx="11" cy="11" r="3.1" fill="#9FD9CB" opacity=".9"/><circle cx="25" cy="11" r="3.1" fill="#9FD9CB" opacity=".9"/><circle cx="7" cy="18" r="3.1" fill="#C4D600" opacity=".9"/><circle cx="18" cy="14" r="3.1" fill="#9FD9CB" opacity=".9"/><circle cx="29" cy="18" r="3.1" fill="#9FD9CB" opacity=".9"/><circle cx="13" cy="22" r="3.1" fill="#C4D600" opacity=".9"/><circle cx="23" cy="22" r="3.1" fill="#9FD9CB" opacity=".9"/><circle cx="18" cy="20" r="3.1" fill="#9FD9CB" opacity=".9"/><rect x="16.6" y="22" width="2.8" height="13" rx="1.4" fill="#C4D600"/></svg>
+        <img id="miskLogo" alt="" src="" style="display:none" />
+      </div>
+      <h1 data-i18n="app_title">رادار الأزمات</h1>
+      <p><span data-i18n="org_name">مؤسسة مسك</span> · Crisis Radar</p>
+    </div>
+    <nav class="sidebar-nav">
     <div class="sidebar-section">
       <div class="sidebar-title" data-i18n="nav_main">التنقل الرئيسي</div>
       <ul class="sidebar-menu">
@@ -301,14 +301,23 @@ body:not(.can-edit) .edit-only{display:none!important}
         <li><a class="menu-item" href="/voices/"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg><span data-i18n="nav_library">مكتبة أصوات المستفيدين</span></a></li>
       </ul>
     </div>
-    <div class="sidebar-divider"></div>
-    <div class="sidebar-section edit-only">
+    <div class="sidebar-section edit-only" style="margin-top:auto">
       <button class="btn-add-issue" id="addBtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M12 5v14M5 12h14"/></svg><span data-i18n="add_case">إضافة قضية</span></button>
     </div>
+    </nav>
+    <div class="sidebar-foot"><span data-i18n="version_label">Version</span> __APP_VERSION__</div>
   </aside>
 
-  <!-- ================= CONTENT ================= -->
-  <main class="content">
+  <!-- ================= MAIN ================= -->
+  <main class="main">
+    <header class="topbar">
+      <button class="nav-toggle" id="navToggle" aria-label="menu"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+      <div class="live off" id="liveBadge"><span class="dot"></span><span id="liveText" data-i18n="live_connecting">…</span></div>
+      <button class="hbtn" id="refreshBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6"/></svg><span data-i18n="refresh">Refresh</span></button>
+      <button class="hbtn" id="langBtn">EN</button>
+      <button class="hbtn login" id="loginBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg><span data-i18n="login">دخول</span></button>
+    </header>
+    <div class="content">
     <div class="cfg" id="cfgBanner" data-i18n-html="cfg_banner"></div>
 
     <!-- DASHBOARD -->
@@ -378,8 +387,8 @@ body:not(.can-edit) .edit-only{display:none!important}
 
     <footer class="foot">
       <span data-i18n-html="footer"></span>
-      <div style="margin-top:.5rem;font-size:.72rem;opacity:.75"><span data-i18n="version_label">Version</span> __APP_VERSION__</div>
     </footer>
+    </div>
   </main>
 </div>
 
@@ -1260,7 +1269,12 @@ async function loadBrand(){
     if(!r.ok) return;
     const b=await r.json();
     const img=document.getElementById("miskLogo");
-    if(img && b && b.logo){ img.style.display=""; img.src=b.logo; }
+    const dots=document.getElementById("brandDots");
+    if(img && b && b.logo){
+      img.onerror=function(){ this.style.display="none"; if(dots) dots.style.display=""; };
+      img.style.display=""; img.src=b.logo;
+      if(dots) dots.style.display="none";
+    }
   }catch(e){}
 }
 function start(){
