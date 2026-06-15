@@ -66,6 +66,10 @@ const UI = {
   topThemes: { ar: "أكثر الموضوعات ذكراً", en: "Most Mentioned Themes" },
   topEntities: { ar: "أكثر الجهات ذكراً", en: "Most Mentioned Entities" },
   qotw: { ar: "اقتباس الأسبوع", en: "Quote of the Week" },
+  sortBy: { ar: "الترتيب", en: "Sort" },
+  sortScore: { ar: "الأعلى نتيجة", en: "Highest score" },
+  sortNewest: { ar: "الأحدث", en: "Newest" },
+  sortOldest: { ar: "الأقدم", en: "Oldest" },
   recent: { ar: "أحدث الإضافات", en: "Recent Additions" },
   addQuote: { ar: "إضافة اقتباس", en: "Add Quote" },
   search: { ar: "بحث في الاقتباسات…", en: "Search quotes…" },
@@ -1125,7 +1129,15 @@ function pickQuoteOfWeek(scored) {
   const featured = scored.filter((q) => q.status === "Featured");
   const pool = featured.length ? featured : scored.filter((q) => q.status === "Verified");
   if (!pool.length) return null;
-  return [...pool].sort((a, b) => b._score - a._score)[0];
+  const byScore = (a, b) => b._score - a._score;
+  // Prefer a quote actually from the current week, then the last month, and
+  // only then fall back to the best of all time — so it feels timely.
+  const win = (days) => { const d = new Date(); d.setDate(d.getDate() - days); return d.toISOString().slice(0, 10); };
+  const week = pool.filter((q) => q.date >= win(7)).sort(byScore);
+  if (week.length) return week[0];
+  const month = pool.filter((q) => q.date >= win(31)).sort(byScore);
+  if (month.length) return month[0];
+  return [...pool].sort(byScore)[0];
 }
 
 /* ======================================================================== */
@@ -1233,19 +1245,23 @@ function Library({ ctx }) {
   const [fEntity, setFEntity] = useState("");
   const [fTheme, setFTheme] = useState("");
   const [fStatus, setFStatus] = useState("");
-  const [fClass, setFClass] = useState("");
+  const [sort, setSort] = useState("score");
 
-  const filtered = useMemo(() => scored.filter((it) => {
-    if (fEntity && it.entity !== fEntity) return false;
-    if (fTheme && !it.themes.includes(fTheme)) return false;
-    if (fStatus && it.status !== fStatus) return false;
-    if (fClass && it.classification !== fClass) return false;
-    if (q) {
-      const hay = (it.quote_ar + " " + it.quote_en + " " + it.sourceName_ar + " " + it.sourceName_en).toLowerCase();
-      if (!hay.includes(q.toLowerCase())) return false;
-    }
-    return true;
-  }).sort((a, b) => b._score - a._score), [scored, q, fEntity, fTheme, fStatus, fClass]);
+  const filtered = useMemo(() => {
+    const cmp = sort === "newest" ? (a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0)
+      : sort === "oldest" ? (a, b) => (a.date > b.date ? 1 : a.date < b.date ? -1 : 0)
+      : (a, b) => b._score - a._score;
+    return scored.filter((it) => {
+      if (fEntity && it.entity !== fEntity) return false;
+      if (fTheme && !it.themes.includes(fTheme)) return false;
+      if (fStatus && it.status !== fStatus) return false;
+      if (q) {
+        const hay = (it.quote_ar + " " + it.quote_en + " " + it.sourceName_ar + " " + it.sourceName_en).toLowerCase();
+        if (!hay.includes(q.toLowerCase())) return false;
+      }
+      return true;
+    }).sort(cmp);
+  }, [scored, q, fEntity, fTheme, fStatus, sort]);
 
   const Sel = ({ value, onChange, list, placeholder }) => (
     <select value={value} onChange={(e) => onChange(e.target.value)} className="vobl-input" style={{ minWidth: 120, fontSize: 12.5 }}>
@@ -1264,13 +1280,14 @@ function Library({ ctx }) {
         </div>
         <Sel value={fEntity} onChange={setFEntity} list={vocab.entities} placeholder={t("entity")} />
         <Sel value={fTheme} onChange={setFTheme} list={vocab.themes} placeholder={t("themeF")} />
-        <select value={fClass} onChange={(e) => setFClass(e.target.value)} className="vobl-input" style={{ fontSize: 12.5 }}>
-          <option value="">{t("classification")}</option>
-          {["High", "Medium", "Low"].map((x) => <option key={x} value={x}>{t(x)}</option>)}
-        </select>
         <select value={fStatus} onChange={(e) => setFStatus(e.target.value)} className="vobl-input" style={{ fontSize: 12.5 }}>
           <option value="">{t("status")}</option>
           {["Draft", "Verified", "Featured"].map((x) => <option key={x} value={x}>{t(x)}</option>)}
+        </select>
+        <select value={sort} onChange={(e) => setSort(e.target.value)} className="vobl-input" style={{ fontSize: 12.5 }} title={t("sortBy")}>
+          <option value="score">{t("sortScore")}</option>
+          <option value="newest">{t("sortNewest")}</option>
+          <option value="oldest">{t("sortOldest")}</option>
         </select>
       </Card>
 
