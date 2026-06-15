@@ -170,12 +170,15 @@ app.use(express.json({ limit: "1mb" }));
 
 const WRITE_METHODS = ["POST", "PATCH", "PUT", "DELETE"];
 
-// Crisis-radar reads are public; its writes require the editor access code.
-// The Voice of Beneficiaries Library is fully private: everything under
-// /api/kv and /api/ai requires the code for EVERY method (even reads), so a
-// visitor at /voices/ sees nothing until they log in. The /api/auth route
-// checks the code itself, so it is allowed through here.
-const PRIVATE_PREFIXES = ["/api/kv", "/api/ai", "/api/ai-findings"];
+// Unified access model across the whole product: reads are public, writes
+// require the editor access code (sent as X-Access-Code). This applies to the
+// crisis cases AND the library's kv store / brand / ai-config — so anyone can
+// VIEW everything, but only an editor can change it. The AI completion proxy
+// is a POST (a write method) so it is gated automatically. The only fully
+// private area is the Hermes AI-findings queue: it is gated for EVERY method
+// (even GET) because it is an internal review queue. /api/auth checks the code
+// itself, so it is allowed through here.
+const PRIVATE_PREFIXES = ["/api/ai-findings"];
 app.use((req, res, next) => {
   if (req.path === "/api/health" || req.path === "/health") return next();
   if (req.path === "/api/auth") return next();

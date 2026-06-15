@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { createRoot } from "react-dom/client";
-import { Loader2, KeyRound, ArrowLeft } from "lucide-react";
+import { Loader2, KeyRound, X } from "lucide-react";
 import App from "./app.jsx";
 import { getCode, setCode, clearCode, verifyCode } from "./api.js";
 
 /* ============================================================
-   Login gate for the Voice of Beneficiaries Library.
-   The whole system is private: nothing loads until the visitor
-   enters the control-panel access code. The code is shared with
-   the Crisis Radar (sessionStorage "crg_code"), so logging into
-   either system unlocks both on this device/session.
+   Voice of Beneficiaries Library — entry point.
+   The library follows the same access model as the Crisis Radar:
+   anyone can VIEW the data, but adding/editing and the settings are
+   unlocked only after entering the control-panel access code. The
+   code is shared with the radar (sessionStorage "crg_code"), so
+   logging into either system unlocks editing on both.
    ============================================================ */
 
 const FONT_CSS = `
@@ -18,21 +19,12 @@ const FONT_CSS = `
 
 const C = { green: "#1B7D5C", greenDeep: "#146145", lime: "#C4D600", teal: "#2DB89F", tealSoft: "#9FD9CB", mist: "#F5F9F8", line: "#E8EDEB", muted: "#5A5A5A", ink: "#1B1B1B" };
 
-function LoginGate({ onAuthed }) {
+/* Editor sign-in — a modal overlay (not a wall). The dashboard is already
+   visible behind it; this only unlocks editing. */
+function EditorLogin({ onClose, onAuthed }) {
   const [code, setCodeVal] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(false);
-  const [checking, setChecking] = useState(true);
-
-  // If a code is already stored (e.g. logged into the radar), verify it silently.
-  useEffect(() => {
-    const existing = getCode();
-    if (!existing) { setChecking(false); return; }
-    verifyCode(existing).then((ok) => {
-      if (ok) onAuthed();
-      else { clearCode(); setChecking(false); }
-    }).catch(() => setChecking(false));
-  }, []);
 
   const submit = async (e) => {
     if (e) e.preventDefault();
@@ -47,22 +39,19 @@ function LoginGate({ onAuthed }) {
     }
   };
 
-  const wrap = { minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: C.green, fontFamily: "'IBM Plex Sans Arabic', system-ui, sans-serif", padding: 20 };
-
-  if (checking) {
-    return <div style={wrap}><Loader2 size={28} style={{ color: C.lime, animation: "vobl-spin 1s linear infinite" }} /><style>{FONT_CSS}{"@keyframes vobl-spin{to{transform:rotate(360deg)}}"}</style></div>;
-  }
+  const wrap = { position: "fixed", inset: 0, zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(10,30,24,0.55)", fontFamily: "'IBM Plex Sans Arabic', system-ui, sans-serif", padding: 20 };
 
   return (
-    <div dir="rtl" style={wrap}>
+    <div dir="rtl" style={wrap} onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <style>{FONT_CSS}{"@keyframes vobl-spin{to{transform:rotate(360deg)}}"}</style>
-      <div style={{ width: 380, maxWidth: "92vw", background: "#fff", borderRadius: 16, padding: 30, boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }}>
+      <div style={{ width: 380, maxWidth: "92vw", background: "#fff", borderRadius: 16, padding: 30, boxShadow: "0 20px 60px rgba(0,0,0,0.3)", position: "relative" }}>
+        <button onClick={onClose} aria-label="close" style={{ position: "absolute", top: 14, insetInlineStart: 14, border: "none", background: "transparent", cursor: "pointer", color: C.muted }}><X size={18} /></button>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 22 }}>
           <div style={{ width: 54, height: 54, borderRadius: 14, background: C.mist, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 14 }}>
             <KeyRound size={26} style={{ color: C.teal }} />
           </div>
-          <div style={{ fontSize: 17, fontWeight: 700, color: C.green, textAlign: "center" }}>مكتبة أصوات المستفيدين</div>
-          <div style={{ fontSize: 12.5, color: C.muted, marginTop: 5, textAlign: "center" }}>هذه المنطقة خاصة — أدخل رمز لوحة التحكم للمتابعة</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: C.green, textAlign: "center" }}>دخول المحرّر</div>
+          <div style={{ fontSize: 12.5, color: C.muted, marginTop: 5, textAlign: "center" }}>أدخل رمز لوحة التحكم لتفعيل التعديل والإعدادات</div>
         </div>
         <form onSubmit={submit}>
           <input autoFocus type="password" value={code} onChange={(e) => setCodeVal(e.target.value)}
@@ -74,25 +63,31 @@ function LoginGate({ onAuthed }) {
             {busy && <Loader2 size={16} style={{ animation: "vobl-spin 1s linear infinite" }} />} دخول
           </button>
         </form>
-        <a href="/" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 16, fontSize: 12.5, color: C.muted, textDecoration: "none" }}>
-          <ArrowLeft size={14} style={{ transform: "scaleX(-1)" }} /> العودة إلى رادار الأزمات
-        </a>
       </div>
     </div>
   );
 }
 
 function Root() {
-  const [authed, setAuthed] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [loginOpen, setLoginOpen] = useState(false);
 
-  const logout = () => { clearCode(); setAuthed(false); };
-  // Called by the app when a request returns 401 mid-session.
-  const authExpired = () => { clearCode(); setAuthed(false); };
+  // Silently restore editor mode if a valid code is already stored (e.g. the
+  // user logged into the radar in the same session).
+  useEffect(() => {
+    const existing = getCode();
+    if (!existing) return;
+    verifyCode(existing).then((ok) => { if (ok) setEditMode(true); else clearCode(); }).catch(() => {});
+  }, []);
 
-  if (!authed) return <LoginGate onAuthed={() => setAuthed(true)} />;
+  const onLogout = () => { clearCode(); setEditMode(false); };
+  // Called when a write returns 401 mid-session — the code is no longer valid.
+  const onAuthExpired = () => { clearCode(); setEditMode(false); };
+
   return (
     <div style={{ minHeight: "100vh", background: C.mist }}>
-      <App onLogout={logout} onAuthExpired={authExpired} />
+      <App canEdit={editMode} onRequestEdit={() => setLoginOpen(true)} onLogout={onLogout} onAuthExpired={onAuthExpired} />
+      {loginOpen && <EditorLogin onClose={() => setLoginOpen(false)} onAuthed={() => { setEditMode(true); setLoginOpen(false); }} />}
     </div>
   );
 }

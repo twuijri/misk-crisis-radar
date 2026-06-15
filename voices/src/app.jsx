@@ -579,7 +579,7 @@ const qt = (q, lang) => (q["quote_" + lang] || q["quote_" + (lang === "ar" ? "en
 /* ========================================================================
    APP
    ======================================================================== */
-export default function App({ onAuthExpired, onLogout }) {
+export default function App({ canEdit = false, onAuthExpired, onLogout, onRequestEdit }) {
   const [data, setData] = useState(null);
   const [lang, setLang] = useState("ar");
   const [view, setView] = useState("dashboard");
@@ -591,6 +591,10 @@ export default function App({ onAuthExpired, onLogout }) {
   useEffect(() => {
     brandGet().then((b) => setBrandLogo((b && b.logo) || null)).catch(() => {});
   }, []);
+
+  // If editing is turned off (logout) while on the editor-only Settings view,
+  // fall back to the dashboard.
+  useEffect(() => { if (!canEdit && view === "settings") setView("dashboard"); }, [canEdit, view]);
 
   const t = (k) => (UI[k] ? UI[k][lang] : k);
   const isAr = lang === "ar";
@@ -614,21 +618,23 @@ export default function App({ onAuthExpired, onLogout }) {
       let fresh = false;
       if (!loaded || !loaded.quotes) { loaded = seed(); fresh = true; }
       loaded = normalizeData(loaded);
-      if (fresh) { try { await kvPut(KEY, loaded); } catch (e) {} }
+      if (fresh && canEdit) { try { await kvPut(KEY, loaded); } catch (e) {} }
       setData(loaded);
       loadedRef.current = true;
     })();
   }, []);
 
   useEffect(() => {
-    if (!loadedRef.current || !data) return;
+    // Only editors persist changes; public viewers never write (and the
+    // server would reject them anyway).
+    if (!loadedRef.current || !data || !canEdit) return;
     const id = setTimeout(() => {
       kvPut(KEY, data).catch((e) => {
         if (e && e.unauthorized && onAuthExpired) onAuthExpired();
       });
     }, 500);
     return () => clearTimeout(id);
-  }, [data]);
+  }, [data, canEdit]);
 
   if (!data) {
     return (
@@ -714,14 +720,15 @@ export default function App({ onAuthExpired, onLogout }) {
     { k: "considerations", icon: Compass },
     { k: "reports", icon: FileText },
     { k: "archive", icon: Archive },
-    { k: "settings", icon: Settings },
+    // Settings (logo + AI config) is editor-only.
+    ...(canEdit ? [{ k: "settings", icon: Settings }] : []),
   ];
 
   const ctx = { data, lang, t, isAr, scored, vocab, config, quotes, archive, insights, considerations,
     setQuotes, setArchive, setInsights, setConsiderations, setConfig, mutateVocab,
     saveQuote, removeQuote, saveAsset, removeAsset, setEditing, setEditingAsset,
     callClaude, exportJson, exportCsv, importJson, resetData,
-    brandLogo, setBrandLogo };
+    brandLogo, setBrandLogo, canEdit };
 
   return (
     <div dir={dir} style={{ fontFamily: fontStack, background: C.mist, color: C.ink, height: "100vh", display: "flex", overflow: "hidden" }}>
@@ -773,13 +780,22 @@ export default function App({ onAuthExpired, onLogout }) {
               style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <Globe size={15} /> {isAr ? "EN" : "ع"}
             </button>
-            <button onClick={() => onLogout && onLogout()} className="vobl-btn-ghost" title={isAr ? "تسجيل الخروج" : "Log out"}
-              style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <LogOut size={15} />
-            </button>
-            <button onClick={() => setEditing(blankQuote(vocab))} className="vobl-btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <Plus size={15} /> {t("addQuote")}
-            </button>
+            {canEdit ? (
+              <button onClick={() => onLogout && onLogout()} className="vobl-btn-ghost" title={isAr ? "تسجيل الخروج" : "Log out"}
+                style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <LogOut size={15} />
+              </button>
+            ) : (
+              <button onClick={() => onRequestEdit && onRequestEdit()} className="vobl-btn-ghost" title={isAr ? "دخول المحرّر" : "Editor sign-in"}
+                style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <KeyRound size={15} /> {isAr ? "دخول المحرّر" : "Sign in"}
+              </button>
+            )}
+            {canEdit && (
+              <button onClick={() => setEditing(blankQuote(vocab))} className="vobl-btn-primary" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <Plus size={15} /> {t("addQuote")}
+              </button>
+            )}
           </div>
         </header>
 
@@ -1218,7 +1234,7 @@ function Dashboard({ ctx, setView }) {
           <SectionTitle icon={Plus}>{t("recent")}</SectionTitle>
           <div>
             {recent.map((q) => (
-              <div key={q.id} onClick={() => { setView("library"); setTimeout(() => ctx.setEditing(q), 50); }}
+              <div key={q.id} onClick={() => { setView("library"); if (ctx.canEdit) setTimeout(() => ctx.setEditing(q), 50); }}
                 className="vobl-row" style={{ padding: "9px 0", borderBottom: `1px solid ${C.line}`, cursor: "pointer" }}>
                 <div style={{ fontSize: 12.5, color: C.ink, lineHeight: 1.5, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
                   {qt(q, lang)}
@@ -1240,7 +1256,7 @@ function Dashboard({ ctx, setView }) {
 /* ======================================================================== */
 /* LIBRARY */
 function Library({ ctx }) {
-  const { scored, vocab, lang, t, isAr, setEditing } = ctx;
+  const { scored, vocab, lang, t, isAr, setEditing, canEdit } = ctx;
   const [q, setQ] = useState("");
   const [fEntity, setFEntity] = useState("");
   const [fTheme, setFTheme] = useState("");
@@ -1295,8 +1311,8 @@ function Library({ ctx }) {
 
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {filtered.map((it) => (
-          <Card key={it.id} className="vobl-row" style={{ padding: 16, cursor: "pointer" }} >
-            <div onClick={() => setEditing(it)}>
+          <Card key={it.id} className="vobl-row" style={{ padding: 16, cursor: canEdit ? "pointer" : "default" }} >
+            <div onClick={() => canEdit && setEditing(it)}>
               <div style={{ display: "flex", gap: 8, alignItems: "flex-start", justifyContent: "space-between" }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 14, lineHeight: 1.7, color: C.ink, fontWeight: 500 }}>
@@ -1518,7 +1534,7 @@ function TrendIcon({ trend }) {
 /* ======================================================================== */
 /* INSIGHTS */
 function Insights({ ctx }) {
-  const { insights, setInsights, scored, vocab, lang, t, isAr, callClaude } = ctx;
+  const { insights, setInsights, scored, vocab, lang, t, isAr, callClaude, canEdit } = ctx;
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(false);
 
@@ -1544,7 +1560,7 @@ function Insights({ ctx }) {
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
         <SectionTitle icon={Lightbulb} sub={isAr ? "ملاحظات تنفيذية مبنية على الأدلة — تتطلب اعتماداً بشرياً قبل النشر" : "Evidence-based executive observations — require human approval before publishing"}>{t("insightsTitle")}</SectionTitle>
-        <button onClick={generate} disabled={busy} className="vobl-btn-ai">{busy ? <Loader2 size={13} className="vobl-spin" /> : <Sparkles size={13} />} {t("generate")}</button>
+        {canEdit && <button onClick={generate} disabled={busy} className="vobl-btn-ai">{busy ? <Loader2 size={13} className="vobl-spin" /> : <Sparkles size={13} />} {t("generate")}</button>}
       </div>
       {err && <div style={{ fontSize: 11.5, color: C.amber, background: C.amberSoft, padding: "7px 10px", borderRadius: 7, marginBottom: 12, display: "flex", gap: 6, alignItems: "center" }}><AlertCircle size={13} />{t("aiUnavailable")}</div>}
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -1558,8 +1574,8 @@ function Insights({ ctx }) {
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12 }}>
               {ins.status === "Verified" ? <Badge bg="#E3F2EC" color={C.teal}><CheckCheck size={10} />{t("humanVerified")}</Badge> : <Badge bg={C.amberSoft} color={C.amber} dashed><Sparkles size={10} />{t("aiDraft")}</Badge>}
-              {ins.status !== "Verified" && <button onClick={() => approve(ins.id)} className="vobl-btn-mini"><Check size={12} /> {t("approve")}</button>}
-              <button onClick={() => remove(ins.id)} className="vobl-btn-mini" style={{ color: "#B33", marginInlineStart: "auto" }}><Trash2 size={12} /></button>
+              {canEdit && ins.status !== "Verified" && <button onClick={() => approve(ins.id)} className="vobl-btn-mini"><Check size={12} /> {t("approve")}</button>}
+              {canEdit && <button onClick={() => remove(ins.id)} className="vobl-btn-mini" style={{ color: "#B33", marginInlineStart: "auto" }}><Trash2 size={12} /></button>}
             </div>
           </Card>
         ))}
@@ -1571,7 +1587,7 @@ function Insights({ ctx }) {
 /* ======================================================================== */
 /* CONSIDERATIONS */
 function Considerations({ ctx }) {
-  const { considerations, setConsiderations, scored, vocab, t, isAr, callClaude } = ctx;
+  const { considerations, setConsiderations, scored, vocab, t, isAr, callClaude, canEdit } = ctx;
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(false);
 
@@ -1607,7 +1623,7 @@ function Considerations({ ctx }) {
           <div style={{ fontSize: 15, fontWeight: 700, color: C.green, display: "flex", gap: 8, alignItems: "center" }}><Compass size={17} style={{ color: C.teal }} /> {UI.considerationsTitle.en} · {UI.considerationsTitle.ar}</div>
           <div style={{ fontSize: 12, color: C.muted, marginTop: 3 }}>{isAr ? "تداعيات اتصالية وسمعة وفرص ناشئة — لا توصيات عامة" : "Communication, reputation & opportunity implications — not generic advice"}</div>
         </div>
-        <button onClick={generate} disabled={busy} className="vobl-btn-ai">{busy ? <Loader2 size={13} className="vobl-spin" /> : <Sparkles size={13} />} {t("generate")}</button>
+        {canEdit && <button onClick={generate} disabled={busy} className="vobl-btn-ai">{busy ? <Loader2 size={13} className="vobl-spin" /> : <Sparkles size={13} />} {t("generate")}</button>}
       </div>
       {err && <div style={{ fontSize: 11.5, color: C.amber, background: C.amberSoft, padding: "7px 10px", borderRadius: 7, marginBottom: 12, display: "flex", gap: 6, alignItems: "center" }}><AlertCircle size={13} />{t("aiUnavailable")}</div>}
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -1619,8 +1635,8 @@ function Considerations({ ctx }) {
             {block(null, t("signals"), c.sigAr, c.sigEn)}
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, paddingTop: 10, borderTop: `1px solid ${C.line}` }}>
               {c.status === "Verified" ? <Badge bg="#E3F2EC" color={C.teal}><CheckCheck size={10} />{t("humanVerified")}</Badge> : <Badge bg={C.amberSoft} color={C.amber} dashed><Sparkles size={10} />{t("aiDraft")}</Badge>}
-              {c.status !== "Verified" && <button onClick={() => approve(c.id)} className="vobl-btn-mini"><Check size={12} /> {t("approve")}</button>}
-              <button onClick={() => remove(c.id)} className="vobl-btn-mini" style={{ color: "#B33", marginInlineStart: "auto" }}><Trash2 size={12} /></button>
+              {canEdit && c.status !== "Verified" && <button onClick={() => approve(c.id)} className="vobl-btn-mini"><Check size={12} /> {t("approve")}</button>}
+              {canEdit && <button onClick={() => remove(c.id)} className="vobl-btn-mini" style={{ color: "#B33", marginInlineStart: "auto" }}><Trash2 size={12} /></button>}
             </div>
           </Card>
         ))}
@@ -1929,19 +1945,19 @@ const ReportPreview = React.memo(function ReportPreview({ built, vocab }) {
 /* ======================================================================== */
 /* ARCHIVE */
 function ArchiveView({ ctx }) {
-  const { archive, scored, vocab, lang, t, isAr, setEditingAsset } = ctx;
+  const { archive, scored, vocab, lang, t, isAr, setEditingAsset, canEdit } = ctx;
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
         <SectionTitle icon={Archive} sub={isAr ? "أدلة داعمة مرتبطة بالاقتباسات" : "Supporting evidence linked to quotes"}>{t("archive")}</SectionTitle>
-        <button onClick={() => setEditingAsset({ id: uid(), type: "interview", title_ar: "", title_en: "", link: "", date: new Date().toISOString().slice(0, 10), linkedQuoteIds: [], notes: "" })} className="vobl-btn-primary"><Plus size={15} /> {t("addAsset")}</button>
+        {canEdit && <button onClick={() => setEditingAsset({ id: uid(), type: "interview", title_ar: "", title_en: "", link: "", date: new Date().toISOString().slice(0, 10), linkedQuoteIds: [], notes: "" })} className="vobl-btn-primary"><Plus size={15} /> {t("addAsset")}</button>}
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 12 }}>
         {archive.map((a) => {
           const linked = scored.filter((q) => a.linkedQuoteIds.includes(q.id));
           return (
-            <Card key={a.id} className="vobl-row" style={{ padding: 16, cursor: "pointer" }} >
-              <div onClick={() => setEditingAsset(a)}>
+            <Card key={a.id} className="vobl-row" style={{ padding: 16, cursor: canEdit ? "pointer" : "default" }} >
+              <div onClick={() => canEdit && setEditingAsset(a)}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
                   <Badge bg={C.green} color="#fff">{Lv(vocab.assetTypes, a.type, lang)}</Badge>
                   <span style={{ fontSize: 11, color: C.muted, marginInlineStart: "auto" }}>{a.date}</span>
