@@ -70,6 +70,7 @@ const UI = {
   sortScore: { ar: "الأعلى نتيجة", en: "Highest score" },
   sortNewest: { ar: "الأحدث", en: "Newest" },
   sortOldest: { ar: "الأقدم", en: "Oldest" },
+  origSource: { ar: "المصدر الأصلي", en: "Original source" },
   recent: { ar: "أحدث الإضافات", en: "Recent Additions" },
   addQuote: { ar: "إضافة اقتباس", en: "Add Quote" },
   search: { ar: "بحث في الاقتباسات…", en: "Search quotes…" },
@@ -1222,6 +1223,7 @@ function Dashboard({ ctx, setView }) {
               <div style={{ fontSize: 12.5, color: C.tealSoft }}>
                 {qotw["sourceName_" + lang] || qotw.sourceName_ar} · {Lv(vocab.programs, qotw.program, lang)}
               </div>
+              {qotw.link && <a href={qotw.link} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 4, marginTop: 8, fontSize: 11.5, color: C.lime, textDecoration: "none", fontWeight: 600 }}><Link2 size={12} /> {t("origSource")}</a>}
               <div style={{ display: "flex", gap: 6, marginTop: 12, flexWrap: "wrap" }}>
                 {qotw.themes.slice(0, 3).map((th) => (
                   <span key={th} style={{ fontSize: 10.5, padding: "2px 8px", borderRadius: 20, background: C.quoteLine, color: C.tealSoft }}>{Lv(vocab.themes, th, lang)}</span>
@@ -1326,6 +1328,7 @@ function Library({ ctx }) {
                     <span>· {Lv(vocab.entities, it.entity, lang)}</span>
                     <span>· {Lv(vocab.programs, it.program, lang)}</span>
                     <span>· {it.date}</span>
+                    {it.link && <a href={it.link} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} style={{ display: "inline-flex", alignItems: "center", gap: 4, color: C.teal, textDecoration: "none", fontWeight: 600 }}><Link2 size={12} /> {t("origSource")}</a>}
                   </div>
                 </div>
                 <div style={{ textAlign: "center", flexShrink: 0, minWidth: 54 }}>
@@ -1838,6 +1841,7 @@ const ReportPreview = React.memo(function ReportPreview({ built, vocab }) {
                 <div key={q.id} style={{ borderInlineStart: `3px solid ${C.lime}`, paddingInlineStart: 14 }}>
                   <div style={{ fontSize: 14.5, lineHeight: 1.8, color: "#fff", fontWeight: 500 }}>“{qt(q, l)}”</div>
                   <div style={{ fontSize: 12, color: C.tealSoft, marginTop: 6 }}>— {q["sourceName_" + l] || q.sourceName_ar} · {Lv(vocab.sourceTypes, q.sourceType, l)} · {Lv(vocab.programs, q.program, l)}</div>
+                  {q.link && <a href={q.link} target="_blank" rel="noopener noreferrer" dir="ltr" style={{ display: "block", fontSize: 10.5, color: C.lime, marginTop: 3, wordBreak: "break-all", textDecoration: "underline" }}>{q.link}</a>}
                 </div>
               ))}
             </div>
@@ -1865,6 +1869,7 @@ const ReportPreview = React.memo(function ReportPreview({ built, vocab }) {
               <div key={q.id} style={{ borderInlineStart: `3px solid ${C.lime}`, paddingInlineStart: 14, paddingTop: 2, paddingBottom: 2 }}>
                 <div style={{ fontSize: 14.5, lineHeight: 1.8, color: C.ink, fontWeight: 500 }}>“{qt(q, l)}”</div>
                 <div style={{ fontSize: 12, color: C.muted, marginTop: 6 }}>— {q["sourceName_" + l] || q.sourceName_ar} · {Lv(vocab.sourceTypes, q.sourceType, l)} · {Lv(vocab.programs, q.program, l)}</div>
+                {q.link && <a href={q.link} target="_blank" rel="noopener noreferrer" dir="ltr" style={{ display: "block", fontSize: 10.5, color: C.teal, marginTop: 3, wordBreak: "break-all", textDecoration: "underline" }}>{q.link}</a>}
               </div>
             ))}
             {!built.quotes.length && <div style={{ color: C.muted, fontSize: 13 }}>{UI.noData[l]}</div>}
