@@ -48,7 +48,7 @@ const C = {
 
 /* ---------------------- bilingual UI strings ---------------------- */
 const UI = {
-  appName: { ar: "مكتبة أصوات المستفيدين", en: "Voice of Beneficiaries Library" },
+  appName: { ar: "مكتبة الانطباعات الإيجابية", en: "Positive Perception Library" },
   appSub: { ar: "الاتصال المؤسسي · مؤسسة مسك", en: "Corporate Communications · Misk Foundation" },
   dashboard: { ar: "لوحة المعلومات", en: "Dashboard" },
   library: { ar: "مكتبة الاقتباسات", en: "Quote Library" },
@@ -741,6 +741,7 @@ export default function App({ canEdit = false, onAuthExpired, onLogout, onReques
           <div style={{ position: "absolute", top: 0, [isAr ? "left" : "right"]: 0, width: 90, height: 60, background: `repeating-linear-gradient(115deg, ${C.lime} 0 7px, transparent 7px 16px)`, opacity: 0.85, transform: isAr ? "scaleX(-1)" : "none" }} />
           <LogoMark logo={brandLogo} />
           <div style={{ fontWeight: 700, fontSize: 15, marginTop: 12, lineHeight: 1.3 }}>{t("appName")}</div>
+          <div dir="ltr" style={{ fontSize: 11.5, color: C.tealSoft, marginTop: 2, fontWeight: 600, textAlign: isAr ? "right" : "left" }}>{isAr ? UI.appName.en : UI.appName.ar}</div>
           <div style={{ fontSize: 11, color: C.tealSoft, marginTop: 3 }}>{t("appSub")}</div>
         </div>
         <nav style={{ padding: 12, flex: 1 }}>
@@ -761,7 +762,7 @@ export default function App({ canEdit = false, onAuthExpired, onLogout, onReques
           <a href="/" className="vobl-nav"
             style={{ display: "flex", alignItems: "center", gap: 11, width: "100%", padding: "10px 12px", marginBottom: 3, borderRadius: 9, textDecoration: "none", textAlign: isAr ? "right" : "left", color: C.tealSoft, fontFamily: "inherit", fontSize: 13.5, fontWeight: 500 }}>
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5" /><circle cx="12" cy="12" r="1.5" /></svg>
-            <span>{isAr ? "رادار الأزمات" : "Crisis Radar"}</span>
+            <span>{isAr ? "رادار الأزمات الإعلامية" : "Media Crisis Radar"}</span>
           </a>
         </nav>
         <div style={{ padding: 14, borderTop: `1px solid ${C.greenLine}`, fontSize: 10.5, color: C.tealSoft }}>
@@ -1737,6 +1738,23 @@ function Reports({ ctx }) {
         pdf.addImage(img, "JPEG", 0, position, imgW, imgH);
         heightLeft -= pageH;
       }
+      // Overlay clickable link annotations on top of the rasterized image so
+      // the source links remain clickable inside the exported PDF.
+      const elRect = el.getBoundingClientRect();
+      const scale = imgW / elRect.width;
+      const totalPages = pdf.getNumberOfPages();
+      el.querySelectorAll("a[href]").forEach((a) => {
+        if (!a.href) return;
+        const r = a.getBoundingClientRect();
+        if (!r.width || !r.height) return;
+        const x = (r.left - elRect.left) * scale;
+        const yAbs = (r.top - elRect.top) * scale;
+        const w = r.width * scale, h = r.height * scale;
+        const page = Math.floor(yAbs / pageH);
+        if (page < 0 || page >= totalPages) return;
+        try { pdf.setPage(page + 1); pdf.link(x, yAbs - page * pageH, w, h, { url: a.href }); } catch (e) {}
+      });
+      pdf.setPage(1);
       pdf.save("voice-of-beneficiaries-report.pdf");
     } catch (e) {
       alert(isAr ? "تعذّر إنشاء ملف PDF" : "Could not generate the PDF");
@@ -1841,7 +1859,7 @@ const ReportPreview = React.memo(function ReportPreview({ built, vocab }) {
                 <div key={q.id} style={{ borderInlineStart: `3px solid ${C.lime}`, paddingInlineStart: 14 }}>
                   <div style={{ fontSize: 14.5, lineHeight: 1.8, color: "#fff", fontWeight: 500 }}>“{qt(q, l)}”</div>
                   <div style={{ fontSize: 12, color: C.tealSoft, marginTop: 6 }}>— {q["sourceName_" + l] || q.sourceName_ar} · {Lv(vocab.sourceTypes, q.sourceType, l)} · {Lv(vocab.programs, q.program, l)}</div>
-                  {q.link && <a href={q.link} target="_blank" rel="noopener noreferrer" dir="ltr" style={{ display: "block", fontSize: 10.5, color: C.lime, marginTop: 3, wordBreak: "break-all", textDecoration: "underline" }}>{q.link}</a>}
+                  {q.link && <a href={q.link} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 4, marginTop: 5, fontSize: 11, color: C.lime, fontWeight: 600, textDecoration: "none" }}><Link2 size={11} /> {t("origSource")}</a>}
                 </div>
               ))}
             </div>
@@ -1869,7 +1887,7 @@ const ReportPreview = React.memo(function ReportPreview({ built, vocab }) {
               <div key={q.id} style={{ borderInlineStart: `3px solid ${C.lime}`, paddingInlineStart: 14, paddingTop: 2, paddingBottom: 2 }}>
                 <div style={{ fontSize: 14.5, lineHeight: 1.8, color: C.ink, fontWeight: 500 }}>“{qt(q, l)}”</div>
                 <div style={{ fontSize: 12, color: C.muted, marginTop: 6 }}>— {q["sourceName_" + l] || q.sourceName_ar} · {Lv(vocab.sourceTypes, q.sourceType, l)} · {Lv(vocab.programs, q.program, l)}</div>
-                {q.link && <a href={q.link} target="_blank" rel="noopener noreferrer" dir="ltr" style={{ display: "block", fontSize: 10.5, color: C.teal, marginTop: 3, wordBreak: "break-all", textDecoration: "underline" }}>{q.link}</a>}
+                {q.link && <a href={q.link} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 4, marginTop: 5, fontSize: 11, color: C.teal, fontWeight: 600, textDecoration: "none" }}><Link2 size={11} /> {t("origSource")}</a>}
               </div>
             ))}
             {!built.quotes.length && <div style={{ color: C.muted, fontSize: 13 }}>{UI.noData[l]}</div>}
@@ -1940,7 +1958,7 @@ const ReportPreview = React.memo(function ReportPreview({ built, vocab }) {
         )}
 
         <div style={{ marginTop: 26, paddingTop: 14, borderTop: `1px solid ${C.line}`, fontSize: 10.5, color: C.muted, display: "flex", justifyContent: "space-between" }}>
-          <span>{isAr ? "مكتبة أصوات المستفيدين · مؤسسة مسك" : "Voice of Beneficiaries Library · Misk Foundation"}</span>
+          <span>{isAr ? "مكتبة الانطباعات الإيجابية · مؤسسة مسك" : "Positive Perception Library · Misk Foundation"}</span>
           <span>{built.generatedAt}</span>
         </div>
       </div>

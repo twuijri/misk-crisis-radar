@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>مسك · رادار الأزمات | Crisis Radar</title>
+<title>مسك · رادار الأزمات الإعلامية | Media Crisis Radar</title>
 <style>
 /* ============ Self-hosted fonts (no CDN) ============ */
 @font-face{font-family:'IBM Plex Sans Arabic';font-style:normal;font-weight:400;font-display:swap;src:url('assets/fonts/ibm-plex-sans-arabic-arabic-400.woff2') format('woff2');unicode-range:U+0600-06FF,U+0750-077F,U+0870-088E,U+0898-08E1,U+08E3-08FF,U+200C-200E,U+2010-2011,U+FB50-FDFF,U+FE70-FEFF}
@@ -43,6 +43,7 @@ a{color:var(--misk-primary)}
 .brand-logo{display:inline-flex;align-items:center;justify-content:center;width:46px;height:46px}
 .brand-logo img{width:42px;height:42px;object-fit:contain;border-radius:9px;background:#fff;padding:3px}
 .brand h1{font-size:15px;font-weight:700;color:#fff;line-height:1.3;margin-top:12px}
+.brand-alt{font-size:11.5px;color:#9FD9CB;font-weight:600;margin-top:2px;direction:ltr;text-align:start}
 .brand p{font-size:11px;color:#9FD9CB;margin-top:3px}
 .sidebar-nav{padding:12px;flex:1;display:flex;flex-direction:column}
 .sidebar-section{margin-bottom:.4rem}
@@ -287,7 +288,8 @@ body:not(.can-edit) .edit-only{display:none!important}
         <svg id="brandDots" width="42" height="42" viewBox="0 0 36 40" aria-hidden="true"><circle cx="18" cy="6" r="3.1" fill="#C4D600" opacity=".9"/><circle cx="11" cy="11" r="3.1" fill="#9FD9CB" opacity=".9"/><circle cx="25" cy="11" r="3.1" fill="#9FD9CB" opacity=".9"/><circle cx="7" cy="18" r="3.1" fill="#C4D600" opacity=".9"/><circle cx="18" cy="14" r="3.1" fill="#9FD9CB" opacity=".9"/><circle cx="29" cy="18" r="3.1" fill="#9FD9CB" opacity=".9"/><circle cx="13" cy="22" r="3.1" fill="#C4D600" opacity=".9"/><circle cx="23" cy="22" r="3.1" fill="#9FD9CB" opacity=".9"/><circle cx="18" cy="20" r="3.1" fill="#9FD9CB" opacity=".9"/><rect x="16.6" y="22" width="2.8" height="13" rx="1.4" fill="#C4D600"/></svg>
         <img id="miskLogo" alt="" src="" style="display:none" />
       </div>
-      <h1 data-i18n="app_title">رادار الأزمات</h1>
+      <h1 data-i18n="app_title">رادار الأزمات الإعلامية</h1>
+      <div class="brand-alt" data-i18n="app_title_alt">Media Crisis Radar</div>
       <p data-i18n="brand_sub">الاتصال المؤسسي · مؤسسة مسك</p>
     </div>
     <nav class="sidebar-nav">
@@ -302,7 +304,7 @@ body:not(.can-edit) .edit-only{display:none!important}
     <div class="sidebar-divider"></div>
     <div class="sidebar-section">
       <ul class="sidebar-menu">
-        <li><a class="menu-item" href="/voices/"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg><span data-i18n="nav_library">مكتبة أصوات المستفيدين</span></a></li>
+        <li><a class="menu-item" href="/voices/"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg><span data-i18n="nav_library">مكتبة الانطباعات الإيجابية</span></a></li>
       </ul>
     </div>
     </nav>
@@ -486,10 +488,10 @@ const CLS_VARIANT = {High:"critical",Medium:"warning",Low:"info"};
    ============================================================ */
 const I18N = {
   en: {
-    app_title:"Crisis Radar", app_subtitle:"Live perception & risk monitoring", org_name:"Misk Foundation", brand_sub:"Corporate Communications · Misk Foundation",
+    app_title:"Media Crisis Radar", app_title_alt:"رادار الأزمات الإعلامية", app_subtitle:"Live perception & risk monitoring", org_name:"Misk Foundation", brand_sub:"Corporate Communications · Misk Foundation",
     refresh:"Refresh", add_case:"Add case", login:"Login", exit_edit:"Exit editing",
     nav_main:"Main navigation", nav_dashboard:"Dashboard", nav_issues:"All cases", nav_radar:"Crisis Radar",
-    nav_systems:"Systems", nav_library:"Voice of Beneficiaries Library", nav_ai:"AI Analysis",
+    nav_systems:"Systems", nav_library:"Positive Perception Library", nav_ai:"AI Analysis",
     ai_title:"AI Analysis", ai_sub:"Findings the Hermes agent generated from social media — review them and promote the worthy ones into the Crisis Radar.",
     ai_refresh:"Refresh", ai_login_needed:"Sign in as an editor to review AI findings.", ai_empty:"No pending AI findings.",
     ai_crisis_yes:"Crisis", ai_crisis_no:"Not a crisis",
@@ -527,7 +529,7 @@ const I18N = {
     edit_login_sub:"The dashboard is view-only. Enter the editor access code to add, edit and delete cases.",
     enter_editing:"Enter editing mode", login_needed:"Your editing session ended. Please log in again.",
     cfg_banner:'<b>Backend not reachable</b> — running in demo mode, nothing is saved. Check that the <code>api</code> service is running at <code>/api</code>.',
-    footer:'<b>Misk · Crisis Radar</b> — shared team workspace. Scores roll up to a Low / Medium / High classification automatically.',
+    footer:'<b>Misk · Media Crisis Radar</b> — shared team workspace. Scores roll up to a Low / Medium / High classification automatically.',
     version_label:"Version",
     live_connecting:"Connecting…", live_synced:"Live · synced", live_error:"Connection error", live_demo:"Demo mode",
     portfolio_avg:"Portfolio average", score:"score", case:"case", cases:"cases", dashed_line:"dashed line",
@@ -561,10 +563,10 @@ const I18N = {
     adv:{ "Info":"For information only", "FollowUp":"Requires follow-up", "Decision":"Requires decision or direction" }
   },
   ar: {
-    app_title:"رادار الأزمات", app_subtitle:"رصد حي للانطباع والمخاطر", org_name:"مؤسسة مسك", brand_sub:"الاتصال المؤسسي · مؤسسة مسك",
+    app_title:"رادار الأزمات الإعلامية", app_title_alt:"Media Crisis Radar", app_subtitle:"رصد حي للانطباع والمخاطر", org_name:"مؤسسة مسك", brand_sub:"الاتصال المؤسسي · مؤسسة مسك",
     refresh:"تحديث", add_case:"إضافة قضية", login:"دخول", exit_edit:"خروج من التعديل",
     nav_main:"التنقل الرئيسي", nav_dashboard:"لوحة التحكم", nav_issues:"جميع القضايا", nav_radar:"رادار الأزمات",
-    nav_systems:"الأنظمة", nav_library:"مكتبة أصوات المستفيدين", nav_ai:"تحليل الذكاء الاصطناعي",
+    nav_systems:"الأنظمة", nav_library:"مكتبة الانطباعات الإيجابية", nav_ai:"تحليل الذكاء الاصطناعي",
     ai_title:"تحليل الذكاء الاصطناعي", ai_sub:"تحليلات يولّدها وكيل هرمز من الشبكات الاجتماعية — راجِعها واعتمد ما يستحق ليُنسخ إلى رادار الأزمات.",
     ai_refresh:"تحديث", ai_login_needed:"سجّل الدخول كمحرّر لمراجعة تحليلات الذكاء الاصطناعي.", ai_empty:"لا توجد تحليلات قيد المراجعة.",
     ai_crisis_yes:"أزمة", ai_crisis_no:"ليست أزمة",
@@ -602,7 +604,7 @@ const I18N = {
     edit_login_sub:"اللوحة للعرض فقط. أدخل رمز التعديل لإضافة القضايا وتعديلها وحذفها.",
     enter_editing:"الدخول لوضع التعديل", login_needed:"انتهت جلسة التعديل. يرجى تسجيل الدخول من جديد.",
     cfg_banner:'<b>تعذّر الوصول للخادم</b> — الصفحة تعمل بالوضع التجريبي ولا يُحفظ شيء. تأكد أن خدمة <code>api</code> تعمل على <code>/api</code>.',
-    footer:'<b>مسك · رادار الأزمات</b> — مساحة عمل مشتركة للفريق. تُصنَّف النتائج تلقائيًا إلى منخفض / متوسط / مرتفع.',
+    footer:'<b>مسك · رادار الأزمات الإعلامية</b> — مساحة عمل مشتركة للفريق. تُصنَّف النتائج تلقائيًا إلى منخفض / متوسط / مرتفع.',
     version_label:"النسخة",
     live_connecting:"جارٍ الاتصال…", live_synced:"مباشر · متزامن", live_error:"خطأ في الاتصال", live_demo:"وضع تجريبي",
     portfolio_avg:"متوسط المحفظة", score:"النتيجة", case:"قضية", cases:"قضايا", dashed_line:"خط متقطع",
@@ -1065,14 +1067,14 @@ body{font-family:'IBM Plex Sans Arabic','DM Sans',system-ui,sans-serif;color:var
 .doc-h1{font-size:1.5rem;font-weight:700;color:var(--g);padding:26px 30px 0}
 .doc-meta{display:flex;flex-wrap:wrap;gap:10px;padding:16px 30px 6px}
 .chiprow{display:inline-flex;flex-direction:column;gap:2px;background:var(--light);border:1px solid var(--bd);border-radius:9px;padding:7px 13px;font-size:.82rem}
-.chiprow i{font-style:normal;font-size:.68rem;text-transform:uppercase;letter-spacing:.4px;color:var(--mut);font-weight:700}.chiprow b{font-weight:700}
+.chiprow i{font-style:normal;font-size:.68rem;color:var(--mut);font-weight:700}.chiprow b{font-weight:700}
 .doc-sec{padding:14px 30px;border-top:1px solid var(--bd);margin-top:14px}.doc-sec:first-of-type{border-top:none;margin-top:6px}
 .doc-sec h2{font-size:.95rem;font-weight:700;color:var(--g);margin-bottom:8px}
 .doc-body{font-size:.9rem;color:#27302C}.doc-body p{white-space:pre-wrap}
 .muted{color:var(--mut)}
 .doc-tbl{width:100%;border-collapse:collapse;font-size:.86rem}
 .doc-tbl th,.doc-tbl td{text-align:start;padding:8px 10px;border-bottom:1px solid var(--bd)}
-.doc-tbl th{background:var(--light);font-weight:700;color:var(--mut);font-size:.72rem;text-transform:uppercase;letter-spacing:.3px}
+.doc-tbl th{background:var(--light);font-weight:700;color:var(--mut);font-size:.72rem}
 .doc-tbl td.num{font-weight:700;color:var(--g)}
 .doc-ul{margin:0;padding-inline-start:20px;font-size:.9rem}.doc-ul li{margin-bottom:5px}
 .doc-tl{list-style:none}.doc-tl li{display:flex;flex-direction:column;gap:2px;padding:8px 0;border-bottom:1px solid var(--bd)}.doc-tl li:last-child{border-bottom:none}
@@ -1089,10 +1091,10 @@ function openPrintWindow(titleText, bodyHtml){
   w.document.close();
 }
 function docFrame(inner){
-  return `<div class="docbar"><button type="button" onclick="window.print()">${esc(t("print"))}</button><button type="button" onclick="window.close()">${esc(t("close"))}</button></div><div class="doc">${inner}</div>`;
+  return `<div class="docbar"><button type="button" onclick="(document.fonts&&document.fonts.ready||Promise.resolve()).then(function(){window.print();})">${esc(t("print"))}</button><button type="button" onclick="window.close()">${esc(t("close"))}</button></div><div class="doc">${inner}</div>`;
 }
 function docHead(kicker,dateLabel,dateVal){
-  return `<header class="brandband"><div class="bb-logo">${LANG==="ar"?"مسك":"MISK"}</div><div class="bb-text"><div class="bb-title">${esc(kicker)}</div><div class="bb-sub">${LANG==="ar"?"رادار الأزمات · مؤسسة مسك":"Crisis Radar · Misk Foundation"}</div></div><div class="bb-date"><span>${esc(dateLabel)}</span><b>${esc(dateVal)}</b></div></header>`;
+  return `<header class="brandband"><div class="bb-logo">${LANG==="ar"?"مسك":"MISK"}</div><div class="bb-text"><div class="bb-title">${esc(kicker)}</div><div class="bb-sub">${LANG==="ar"?"رادار الأزمات الإعلامية · مؤسسة مسك":"Media Crisis Radar · Misk Foundation"}</div></div><div class="bb-date"><span>${esc(dateLabel)}</span><b>${esc(dateVal)}</b></div></header>`;
 }
 function docSection(title,contentHtml){ return `<section class="doc-sec"><h2>${esc(title)}</h2><div class="doc-body">${contentHtml}</div></section>`; }
 function metaChip(label,value,color){ return `<span class="chiprow"><i>${esc(label)}</i><b${color?` style="color:${color}"`:""}>${value}</b></span>`; }
@@ -1115,7 +1117,7 @@ async function generateReport(id){
     +docSection(t("action_title"),`<p>${esc(c.recommended_action)||"—"}</p>`)
     +docSection(t("refs_title"),`<p>${linkify(c.reference_links)}</p>`)
     +docSection(t("timeline_title"),tl)
-    +`<div class="doc-foot">${esc(t("report_date"))}: ${esc(today)} · ${LANG==="ar"?"مسك · رادار الأزمات":"Misk · Crisis Radar"}</div>`;
+    +`<div class="doc-foot">${esc(t("report_date"))}: ${esc(today)} · ${LANG==="ar"?"مسك · رادار الأزمات الإعلامية":"Misk · Media Crisis Radar"}</div>`;
   openPrintWindow(t("report_doc_title")+" — "+c.title, docFrame(inner));
 }
 function generateAdvisory(id){
@@ -1134,7 +1136,7 @@ function generateAdvisory(id){
     +docSection(t("adv_stakeholders"),`<p>${c.owner?esc(stakeLabel(c.owner)):esc(t("not_specified"))}</p>`)
     +docSection(t("adv_current_actions"),`<p>${esc(c.recommended_action)||"—"}</p>`)
     +docSection(t("adv_recommendation"),`<p><b style="color:${col}">${esc(advLabel(level))}</b><br>${esc(c.recommended_action)||"—"}</p>`)
-    +`<div class="doc-foot">${esc(t("briefing_date"))}: ${esc(today)} · ${LANG==="ar"?"مسك · رادار الأزمات":"Misk · Crisis Radar"}</div>`;
+    +`<div class="doc-foot">${esc(t("briefing_date"))}: ${esc(today)} · ${LANG==="ar"?"مسك · رادار الأزمات الإعلامية":"Misk · Media Crisis Radar"}</div>`;
   openPrintWindow(t("advisory_doc_title")+" — "+c.title, docFrame(inner));
 }
 /* Build a polished, email-client-safe HTML version of the draft (inline styles,
@@ -1155,7 +1157,7 @@ function buildEmailHtml(c, subject){
    <tr><td align="center">
     <table role="presentation" cellpadding="0" cellspacing="0" width="600" style="max-width:600px;width:100%;background:#FFFFFF;border-radius:14px;overflow:hidden;border:1px solid #E8EDEB;font-family:'Segoe UI',Tahoma,Arial,sans-serif">
      <tr><td style="background:#1B7D5C;background:linear-gradient(135deg,#1B7D5C,#2DB89F);padding:22px 26px;text-align:${align}">
-       <div style="font-size:11px;letter-spacing:1px;color:#C9F0E5;font-weight:700">${isAr?"مسك · رادار الأزمات":"MISK · CRISIS RADAR"}</div>
+       <div style="font-size:11px;letter-spacing:${isAr?0:1}px;color:#C9F0E5;font-weight:700">${isAr?"مسك · رادار الأزمات الإعلامية":"MISK · MEDIA CRISIS RADAR"}</div>
        <div style="font-size:19px;font-weight:700;color:#FFFFFF;margin-top:6px">${esc(c.title)}</div>
        <div style="display:inline-block;margin-top:10px;background:rgba(255,255,255,.18);color:#FFFFFF;font-size:12px;font-weight:700;padding:4px 11px;border-radius:999px;border-${align==="right"?"right":"left"}:3px solid ${band}">${esc(cls)} · ${esc(sc)}/5</div>
      </td></tr>
