@@ -1082,16 +1082,29 @@ body{font-family:'IBM Plex Sans Arabic','DM Sans',system-ui,sans-serif;color:var
 .doc-foot{padding:18px 30px;color:var(--mut);font-size:.76rem;border-top:1px solid var(--bd)}
 a{color:var(--g);word-break:break-all}
 @media print{html,body{background:#fff}.docbar{display:none}.doc{border:none;border-radius:0;margin:0;max-width:100%}@page{margin:14mm}}`;
+// Render the document in an in-page overlay (no pop-up window — pop-ups are
+// often blocked, which left users staring at a blank/green page). The overlay
+// covers the app; printing isolates it via the @media print rule below.
+const OVERLAY_CSS="#reportOverlay{position:fixed;inset:0;z-index:9999;overflow:auto;background:#EEF3F1}@media print{body>*:not(#reportOverlay){display:none!important}#reportOverlay{position:static;overflow:visible}}";
+function closeReport(){
+  const o=document.getElementById("reportOverlay"); if(o) o.remove();
+  const s=document.getElementById("reportStyle"); if(s) s.remove();
+}
 function openPrintWindow(titleText, bodyHtml){
-  const w=window.open("","_blank");
-  if(!w){ alert(LANG==="ar"?"يرجى السماح بالنوافذ المنبثقة لإصدار المستند.":"Please allow pop-ups to generate the document."); return; }
-  const dir=LANG==="ar"?"rtl":"ltr";
-  w.document.open();
-  w.document.write(`<!DOCTYPE html><html dir="${dir}" lang="${LANG}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(titleText)}</title><style>${printFontCss()}${PRINT_CSS}</style></head><body>${bodyHtml}</body></html>`);
-  w.document.close();
+  closeReport();
+  const style=document.createElement("style");
+  style.id="reportStyle";
+  style.textContent=printFontCss()+PRINT_CSS+OVERLAY_CSS;
+  document.head.appendChild(style);
+  const ov=document.createElement("div");
+  ov.id="reportOverlay";
+  ov.dir=LANG==="ar"?"rtl":"ltr";
+  ov.innerHTML=bodyHtml;
+  document.body.appendChild(ov);
+  ov.scrollTop=0;
 }
 function docFrame(inner){
-  return `<div class="docbar"><button type="button" onclick="(document.fonts&&document.fonts.ready||Promise.resolve()).then(function(){window.print();})">${esc(t("print"))}</button><button type="button" onclick="window.close()">${esc(t("close"))}</button></div><div class="doc">${inner}</div>`;
+  return `<div class="docbar"><button type="button" onclick="(document.fonts&&document.fonts.ready||Promise.resolve()).then(function(){window.print();})">${esc(t("print"))}</button><button type="button" onclick="closeReport()">${esc(t("close"))}</button></div><div class="doc">${inner}</div>`;
 }
 function docHead(kicker,dateLabel,dateVal){
   return `<header class="brandband"><div class="bb-logo">${LANG==="ar"?"مسك":"MISK"}</div><div class="bb-text"><div class="bb-title">${esc(kicker)}</div><div class="bb-sub">${LANG==="ar"?"رادار الأزمات الإعلامية · مؤسسة مسك":"Media Crisis Radar · Misk Foundation"}</div></div><div class="bb-date"><span>${esc(dateLabel)}</span><b>${esc(dateVal)}</b></div></header>`;
